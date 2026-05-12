@@ -312,7 +312,7 @@ if [[ -f "$TMP_DIR/colors.json" ]]; then
     match=$(jq -r '.colors.tertiary // "#fab387"' "$TMP_DIR/colors.json" | sed 's/^#//')
     cat > "$HOME/.config/fuzzel/colors.ini" << FUZZEL_EOF
 [colors]
-background=${bg}ee
+background=${bg}a6
 text=${fg}ff
 prompt=${accent}ff
 placeholder=6C7086aa

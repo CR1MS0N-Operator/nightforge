@@ -60,3 +60,5 @@ dotfiles/zsh/.zshrc
 # Generated files
 *.qslog
 /tmp/
+.dmux/
+.gitnexus
