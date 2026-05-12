@@ -28,6 +28,13 @@ Item {
     property string opsUptime: "--"
     property string serviceStr: ""
     property string c2Status: ""
+    property var agentSessions: []
+    property int activeGraphTab: 0
+    property var graphPaths: [
+        "/tmp/session-tracker-timeline.svg",
+        "/tmp/session-tracker-tools.svg",
+        "/tmp/session-tracker-models.svg"
+    ]
 
     // =========================================================
     // Parse Functions
@@ -142,6 +149,24 @@ Item {
         command: ["sh", "-c", "C2S='[]'; [ -f /opt/mythic/.env ] && C2=$(echo 'Mythic' | jq -Rsc '{name:.,status:\"active\"}' 2>/dev/null) && C2S=\"[$C2]\"; echo \"$C2S\""]
         stdout: StdioCollector { onStreamFinished: { var t = text.trim(); if (t) dashboard.c2Status = t; } }
     }
+    Process {
+        id: sessionPoll
+        running: true
+        command: [Quickshell.env("HOME") + "/Github/nightforge/session-tracker/target/release/session-tracker"]
+    }
+    Process {
+        id: sessionRead
+        running: false
+        command: ["cat", "/tmp/session-tracker.json"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(text.trim())
+                    dashboard.agentSessions = data.sessions || []
+                } catch(e) { dashboard.agentSessions = [] }
+            }
+        }
+    }
 
     Timer {
         interval: 5000; running: true; repeat: true
@@ -153,6 +178,8 @@ Item {
             opsDataPoll.running = false; opsDataPoll.running = true
             opsSvcPoll.running = false; opsSvcPoll.running = true
             c2Poll.running = false; c2Poll.running = true
+            sessionPoll.running = false; sessionPoll.running = true
+            sessionRead.running = true
         }
     }
 
@@ -452,6 +479,125 @@ Item {
                                     catch(e) { return "None configured"; }
                                 }
                                 font.pixelSize: 11; color: mocha.text
+                            }
+                        }
+                    }
+
+                    // --- Agent Sessions ---
+                    Rectangle {
+                        Layout.fillWidth: true
+                        radius: 10
+                        color: mocha.surface1
+                        implicitHeight: sessionsCol.implicitHeight + 24
+
+                        ColumnLayout {
+                            id: sessionsCol
+                            anchors.left: parent.left; anchors.right: parent.right
+                            anchors.top: parent.top; anchors.margins: 12
+                            spacing: 10
+
+                            Text {
+                                text: "󱚝  Agent Sessions"
+                                font.family: "Iosevka Nerd Font"; font.pixelSize: 12; font.bold: true
+                                color: mocha.subtext0
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 6
+                                Repeater {
+                                    model: ["Timeline", "Tool Usage", "Model Routing"]
+                                    delegate: Rectangle {
+                                        height: 26; radius: 6
+                                        color: dashboard.activeGraphTab === index
+                                            ? Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.3)
+                                            : mocha.surface0
+                                        implicitWidth: tabText.implicitWidth + 16
+                                        Text {
+                                            id: tabText
+                                            anchors.centerIn: parent
+                                            text: modelData
+                                            font.pixelSize: 10; font.bold: dashboard.activeGraphTab === index
+                                            color: dashboard.activeGraphTab === index ? mocha.mauve : mocha.text
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: dashboard.activeGraphTab = index
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 180; radius: 8
+                                color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.5)
+                                clip: true
+                                Image {
+                                    id: graphImage
+                                    anchors.fill: parent
+                                    anchors.margins: 8
+                                    source: dashboard.agentSessions.length > 0
+                                        ? "file://" + dashboard.graphPaths[dashboard.activeGraphTab]
+                                        : ""
+                                    fillMode: Image.PreserveAspectFit
+                                    cache: false
+                                }
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "No graph data"
+                                    font.pixelSize: 11
+                                    color: mocha.overlay0
+                                    visible: dashboard.agentSessions.length === 0
+                                }
+                            }
+
+                            ListView {
+                                id: sessionsList
+                                Layout.fillWidth: true
+                                height: Math.min(dashboard.agentSessions.length * 36, 180)
+                                clip: true; spacing: 4
+                                model: dashboard.agentSessions
+
+                                delegate: Rectangle {
+                                    width: parent ? parent.width : 0
+                                    height: 34; radius: 6
+                                    color: mocha.surface0
+
+                                    RowLayout {
+                                        anchors.fill: parent; anchors.margins: 8; spacing: 8
+                                        Rectangle {
+                                            width: 8; height: 8; radius: 4
+                                            color: modelData.status === "active" ? mocha.green : mocha.overlay0
+                                        }
+                                        ColumnLayout {
+                                            spacing: 1
+                                            Text {
+                                                text: (modelData.agent === "opencode" ? "󰨞 " : "󰣇 ") +
+                                                      (modelData.agent === "opencode" ? "OpenCode " : "Hermes ") +
+                                                      modelData.id.replace("stats-pid-", "").substring(0, 8)
+                                                font.family: "JetBrains Mono"; font.pixelSize: 10; font.bold: true
+                                                color: mocha.text
+                                            }
+                                            Text {
+                                                text: modelData.model + "  ·  " + modelData.total_calls + " calls  ·  " +
+                                                      Math.round(modelData.uptime_seconds / 60) + "m"
+                                                font.pixelSize: 9
+                                                color: mocha.overlay0
+                                            }
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                        Text {
+                                            text: {
+                                                if (modelData.cost_saved > 0) return "󰄪 $" + modelData.cost_saved.toFixed(2)
+                                                if (modelData.tokens_saved > 0) return "󰄪 " + modelData.tokens_saved + " tok"
+                                                return ""
+                                            }
+                                            font.pixelSize: 9
+                                            color: mocha.teal
+                                            visible: modelData.tokens_saved > 0 || modelData.cost_saved > 0
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
