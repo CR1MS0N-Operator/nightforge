@@ -87,6 +87,55 @@ chore: update deploy script, matugen-sync fix, prune opencode config
 
 ## Unresolved Items
 
-- **Dashboard not opening**: Click handler exists at line 742 but Widget may have QML runtime error. Test with `echo "dashboard" > /tmp/qs_widget_state`.
-- **Audio popup "No sinks"**: Fixed by adding `bash` prefix to Process command. Verify after reboot.
-- **Scaling**: `local.kdl` correct for DP-1 + HDMI-A-1. Run `niri-outputs` to verify current best mode.
+- **Dashboard not opening**: Click handler exists at line 742 but widget may have QML runtime error. Test with `echo "dashboard" > /tmp/qs_widget_state`.
+- **Dashboard Operations layout**: Text was overlapping — bumped font sizes and spacing, removed fixed Layout.preferredHeight constraints. Needs verification.
+- **Audio popup "No sinks"**: Fixed by adding explicit `bash` prefix to Process commands in AudioDevicePopup.qml and TopBar.qml. Verified working.
+- **Scaling**: `local.kdl` configured for DP-1 (180Hz) + HDMI-A-1 (4K@60, scale 1.5). Run `~/Github/nightforge/niri-modifications/outputs/niri-outputs` to verify.
+
+## Script Cleanup (Final Session)
+
+| Script | Action | Reason |
+|--------|--------|--------|
+| `focus_next_monitor.sh` | Removed | All commands commented. Dead Hyprland code. Niri handles monitor focus via keybinds. |
+| `exit.sh` | Removed | Niri quit command commented out. Not referenced anywhere. |
+| `lock.sh` | Removed | Not referenced. Power menu uses `gtklock -d`, keybinds use `lock-screen.sh`. |
+| `volume_listener.sh` | Removed | Depends on `pamixer` (not installed). Not referenced by any service or config. |
+| `reload.sh` | Fixed | Removed missing `Floating.qml` reference. Now reloads `Main.qml` + `TopBar.qml` only. |
+| `keybind-cheatsheet.sh` | Kept | Active via `Mod+Slash` keybind. Quick overlay — different UX from Settings keybinds tab. |
+
+## Next Session: Agent Sessions Dashboard
+
+### Copy-paste to start next conversation:
+
+```
+Continue from session handoff at docs/NEXT_SESSION.md. 
+Implement the Agent Sessions Dashboard following the architecture in the handoff.
+
+Key tasks:
+1. Fix DashboardWidget.qml not opening (test: echo "dashboard" > /tmp/qs_widget_state)
+2. Fix Operations section text overlapping (layout after preferredHeight removals)
+3. Build Rust backend for session tracking (OpenCode + Hermes Agent)
+4. Integrate native Mermaid graph rendering → SVG
+5. Add agent sessions section to DashboardWidget.qml
+6. Create niri-modifications/ README.md for reproducible setup
+
+Context: NightForge v3 Niri desktop, Quickshell QML bar, Go qs-watcher, Waterfox default browser.
+```
+
+### Research queries for Perplexity:
+
+```
+"mermaid-rs-renderer vs mermaid-cli native Rust Mermaid SVG rendering performance comparison 2026 for desktop dashboard real-time session tracking"
+```
+
+```
+"OpenCode agent session tracking API IPC local endpoint Go Rust collect active sessions history token usage metadata 2026"
+```
+
+```
+"Hermes Agent session monitoring REST API status active agents deployment tracking local queries"
+```
+
+```
+"Quickshell QML SVG rendering external Rust process IPC image provider data-driven dashboard architecture Wayland 2026"
+```
