@@ -1,0 +1,19 @@
+// ========== LOCAL MACHINE-SPECIFIC CONFIG ==========
+// This file is gitignored - contains hardware-specific settings
+// Last updated: 2026-03-02
+
+// ASUS VG259Q3A - LEFT MONITOR
+output "DP-1" {
+    mode "1920x1080@180"
+    scale 1.0
+    position x=1920 y=0
+    transform "normal"
+}
+
+// LG UH5530 - RIGHT MONITOR (with gap)
+output "HDMI-A-1" {
+    mode "3840x2160@60"
+    scale 1.5
+    position x=0 y=0
+    transform "normal"
+}
