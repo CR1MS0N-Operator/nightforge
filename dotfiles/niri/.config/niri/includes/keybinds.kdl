@@ -24,8 +24,8 @@ binds {
     Mod+Shift+M { spawn "sh" "-c" "echo monitor > /tmp/qs_widget_state"; }
     Mod+Comma  { spawn "sh" "-c" "echo settings > /tmp/qs_widget_state"; }
     Mod+Shift+V { spawn "sh" "-c" "echo clipboard > /tmp/qs_widget_state"; }
+    Mod+Shift+D { spawn "sh" "-c" "echo dashboard > /tmp/qs_widget_state"; }
     Mod+Escape { spawn "sh" "-c" "echo close > /tmp/qs_widget_state"; }
-    Escape { spawn "sh" "-c" "echo close > /tmp/qs_widget_state"; }
 
     // ========== SCREENSHOTS ==========
     // Full screen: Print
@@ -66,6 +66,8 @@ binds {
     Mod+W { toggle-column-tabbed-display; }
     Mod+G { toggle-window-floating; }
     Mod+C { center-column; }
+    // niri-tweaks
+    Mod+Backslash { spawn "bash" "-c" "~/.config/quickshell/scripts/niri_tweaks/tweaks window-details"; }
     Mod+Alt+C hotkey-overlay-title="Center Window" { center-window; }
 
     // ========== SMART NAVIGATION ==========
@@ -126,7 +128,7 @@ binds {
     Mod+R { switch-preset-column-width; }
 
     // ========== OBSIDIAN (NightForge vaults) ==========
-    Mod+Shift+D { spawn "obsidian" "obsidian://daily"; }
+    Mod+Alt+D { spawn "obsidian" "obsidian://daily"; }
     Mod+Shift+O { spawn "obsidian" "obsidian://search"; }
     Mod+O { spawn "obsidian" "obsidian://open?vault=azrael-vault"; }
 
