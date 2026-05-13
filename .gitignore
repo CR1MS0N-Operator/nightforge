@@ -60,6 +60,9 @@ dotfiles/zsh/.zshrc
 # Rust builds
 session-tracker/target/
 
+# Go binaries
+niri-modifications/scripts/dashboard-ctl
+
 # Generated files
 *.qslog
 /tmp/
