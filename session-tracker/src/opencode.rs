@@ -44,7 +44,14 @@ fn is_recently_active(path: &Path, threshold_secs: u64) -> bool {
     elapsed.as_secs() < threshold_secs
 }
 
-pub fn read_sessions() -> Vec<Session> {
+fn resolve_workdir_from_pid(pid_str: &str) -> String {
+    let cwd_path = format!("/proc/{}/cwd", pid_str);
+    std::fs::read_link(&cwd_path)
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default()
+}
+
+pub fn read_sessions(machine: &str) -> Vec<Session> {
     let dir = sessions_dir();
     if !Path::new(&dir).exists() {
         return Vec::new();
@@ -71,6 +78,12 @@ pub fn read_sessions() -> Vec<Session> {
             Ok(s) => s,
             Err(_) => continue,
         };
+
+        let pid_str = fname
+            .strip_prefix("stats-pid-")
+            .and_then(|s| s.strip_suffix(".json"))
+            .unwrap_or("");
+        let workdir = resolve_workdir_from_pid(pid_str);
 
         let id = fname.trim_end_matches(".json").to_string();
         let started = Utc.timestamp_millis_opt(stats.session_start);
@@ -103,6 +116,8 @@ pub fn read_sessions() -> Vec<Session> {
             cost_saved: stats.dollars_saved_session,
             model: "unknown".to_string(),
             tools,
+            machine: machine.to_string(),
+            workdir,
         });
     }
 

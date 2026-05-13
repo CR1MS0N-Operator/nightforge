@@ -53,13 +53,32 @@ fn read_model_from_config() -> String {
     "unknown".to_string()
 }
 
-pub fn read_sessions() -> Vec<Session> {
+fn read_project_from_config() -> String {
+    let config_path = format!(
+        "{}/.hermes/config.yaml",
+        std::env::var("HOME").unwrap_or_default()
+    );
+    let content = match std::fs::read_to_string(&config_path) {
+        Ok(c) => c,
+        Err(_) => return "~/.hermes/hermes-agent".to_string(),
+    };
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if let Some(project) = trimmed.strip_prefix("project:") {
+            return project.trim().to_string();
+        }
+    }
+    "~/.hermes/hermes-agent".to_string()
+}
+
+pub fn read_sessions(machine: &str) -> Vec<Session> {
     let dir = sessions_dir();
     if !Path::new(&dir).exists() {
         return Vec::new();
     }
 
     let model = read_model_from_config();
+    let project = read_project_from_config();
 
     let mut entries: Vec<(String, NaiveDateTime, std::path::PathBuf)> = Vec::new();
 
@@ -124,6 +143,8 @@ pub fn read_sessions() -> Vec<Session> {
             cost_saved: 0.0,
             model: model.clone(),
             tools: HashMap::new(),
+            machine: machine.to_string(),
+            workdir: project.clone(),
         });
     }
 

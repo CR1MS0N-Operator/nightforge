@@ -57,6 +57,9 @@ dotfiles/nvim/.config/nvim/lua/plugins/dankcolors.lua
 /.config/
 dotfiles/zsh/.zshrc
 
+# Rust builds
+session-tracker/target/
+
 # Generated files
 *.qslog
 /tmp/
