@@ -30,11 +30,7 @@ Item {
     property string c2Status: ""
     property var agentSessions: []
     property int activeGraphTab: 0
-    property var graphPaths: [
-        "/tmp/session-tracker-timeline.svg",
-        "/tmp/session-tracker-tools.svg",
-        "/tmp/session-tracker-models.svg"
-    ]
+
 
     // =========================================================
     // Parse Functions
@@ -541,24 +537,172 @@ Item {
 
                             Rectangle {
                                 Layout.fillWidth: true
-                                height: 180; radius: 8
+                                height: 150; radius: 8
                                 color: Qt.rgba(mocha.base.r, mocha.base.g, mocha.base.b, 0.5)
                                 clip: true
-                                Image {
-                                    id: graphImage
-                                    anchors.fill: parent
-                                    anchors.margins: 8
-                                    source: dashboard.agentSessions.length > 0
-                                        ? "file://" + dashboard.graphPaths[dashboard.activeGraphTab]
-                                        : ""
-                                    fillMode: Image.PreserveAspectFit
-                                    cache: false
+
+                                Flickable {
+                                    anchors.fill: parent; anchors.margins: 6
+                                    contentWidth: timelineCol.width
+                                    contentHeight: timelineCol.height
+                                    clip: true
+                                    visible: dashboard.activeGraphTab === 0
+                                    Column {
+                                        id: timelineCol
+                                        width: parent.width
+                                        spacing: 4
+                                        Repeater {
+                                            model: dashboard.agentSessions.slice(0, 20)
+                                            delegate: Item {
+                                                width: parent ? parent.width : 0
+                                                height: 22
+                                                Rectangle {
+                                                    anchors.left: parent.left
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    width: Math.max(8, Math.min(modelData.uptime_seconds / 15, parent.width - 120))
+                                                    height: 14; radius: 3
+                                                    color: mocha.overlay0
+                                                    opacity: 0.3
+                                                }
+                                                Rectangle {
+                                                    anchors.left: parent.left
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    width: Math.max(4, Math.min(modelData.uptime_seconds / 15, parent.width - 120))
+                                                    height: 6; radius: 3
+                                                    color: modelData.status === "active" ? mocha.green : mocha.mauve
+                                                    opacity: 0.8
+                                                }
+                                                RowLayout {
+                                                    anchors.fill: parent; anchors.leftMargin: 4
+                                                    spacing: 4
+                                                    Text {
+                                                        text: modelData.agent === "opencode" ? "󰨞" : "󰣇"
+                                                        font.pixelSize: 9; color: mocha.text
+                                                    }
+                                                    Text {
+                                                        text: modelData.id.replace("stats-pid-","").substring(0,6)
+                                                        font.pixelSize: 9; color: mocha.text
+                                                        elide: Text.ElideRight
+                                                        Layout.fillWidth: true
+                                                    }
+                                                    Text {
+                                                        text: Math.round(modelData.uptime_seconds/60) + "m"
+                                                        font.pixelSize: 8; color: mocha.overlay0
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Text {
+                                            text: "No sessions"
+                                            font.pixelSize: 10; color: mocha.overlay0
+                                            visible: parent.children.length === 0
+                                        }
+                                    }
+                                }
+
+                                Flickable {
+                                    anchors.fill: parent; anchors.margins: 6
+                                    contentWidth: toolsCol.width
+                                    contentHeight: toolsCol.height
+                                    clip: true
+                                    visible: dashboard.activeGraphTab === 1
+                                    Column {
+                                        id: toolsCol
+                                        width: parent.width
+                                        spacing: 4
+                                        property var totals: {
+                                            var t = {};
+                                            for (var i = 0; i < dashboard.agentSessions.length; i++) {
+                                                var s = dashboard.agentSessions[i];
+                                                for (var k in s.tools) { t[k] = (t[k] || 0) + s.tools[k]; }
+                                            }
+                                            return t;
+                                        }
+                                        property int maxCalls: {
+                                            var m = 1;
+                                            for (var k in totals) { m = Math.max(m, totals[k]); }
+                                            return m;
+                                        }
+                                        Repeater {
+                                            model: { var k = []; for (var t in toolsCol.totals) { k.push(t); } return k; }
+                                            delegate: RowLayout {
+                                                width: parent ? parent.width : 0
+                                                height: 16; spacing: 4
+                                                Text {
+                                                    text: modelData; width: 90
+                                                    font.pixelSize: 8; color: mocha.overlay0
+                                                    elide: Text.ElideRight
+                                                }
+                                                Rectangle {
+                                                    height: 10; radius: 3
+                                                    width: Math.max(4, (toolsCol.totals[modelData]/toolsCol.maxCalls) * (parent.width - 130))
+                                                    color: mocha.mauve
+                                                }
+                                                Text {
+                                                    text: toolsCol.totals[modelData]
+                                                    font.pixelSize: 8; color: mocha.text
+                                                }
+                                            }
+                                        }
+                                        Text {
+                                            text: "No tool data"
+                                            font.pixelSize: 10; color: mocha.overlay0
+                                            visible: { var c = 0; for (var t in toolsCol.totals) { c++; } return c === 0; }
+                                        }
+                                    }
+                                }
+
+                                Flickable {
+                                    anchors.fill: parent; anchors.margins: 6
+                                    contentWidth: modelsFlow.width
+                                    contentHeight: modelsFlow.height
+                                    clip: true
+                                    visible: dashboard.activeGraphTab === 2
+                                    Flow {
+                                        id: modelsFlow
+                                        width: parent.width
+                                        spacing: 6
+                                        property var counts: {
+                                            var c = {};
+                                            for (var i = 0; i < dashboard.agentSessions.length; i++) {
+                                                var m = dashboard.agentSessions[i].model || "unknown";
+                                                c[m] = (c[m] || 0) + 1;
+                                            }
+                                            return c;
+                                        }
+                                        Repeater {
+                                            model: { var k = []; for (var m in modelsFlow.counts) { k.push(m); } return k; }
+                                            delegate: Rectangle {
+                                                height: 28; radius: 6
+                                                color: mocha.surface0
+                                                implicitWidth: pillRow.implicitWidth + 12
+                                                RowLayout {
+                                                    id: pillRow
+                                                    anchors.centerIn: parent
+                                                    spacing: 6
+                                                    Text {
+                                                        text: modelData
+                                                        font.pixelSize: 9; font.bold: true
+                                                        color: mocha.text; elide: Text.ElideRight
+                                                    }
+                                                    Text {
+                                                        text: "x" + modelsFlow.counts[modelData]
+                                                        font.pixelSize: 9; color: mocha.mauve
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Text {
+                                            text: "No data"
+                                            font.pixelSize: 10; color: mocha.overlay0
+                                            visible: { var c = 0; for (var m in modelsFlow.counts) { c++; } return c === 0; }
+                                        }
+                                    }
                                 }
                                 Text {
                                     anchors.centerIn: parent
                                     text: "No graph data"
-                                    font.pixelSize: 11
-                                    color: mocha.overlay0
+                                    font.pixelSize: 11; color: mocha.overlay0
                                     visible: dashboard.agentSessions.length === 0
                                 }
                             }
@@ -566,38 +710,43 @@ Item {
                             ListView {
                                 id: sessionsList
                                 Layout.fillWidth: true
-                                height: Math.min(dashboard.agentSessions.length * 36, 180)
+                                height: Math.min(dashboard.agentSessions.length * 38, 150)
                                 clip: true; spacing: 4
                                 model: dashboard.agentSessions
 
                                 delegate: Rectangle {
                                     width: parent ? parent.width : 0
-                                    height: 34; radius: 6
+                                    height: 38; radius: 6
                                     color: mocha.surface0
+                                    clip: true
 
                                     RowLayout {
-                                        anchors.fill: parent; anchors.margins: 8; spacing: 8
+                                        anchors.fill: parent; anchors.margins: 6; spacing: 6
                                         Rectangle {
                                             width: 8; height: 8; radius: 4
                                             color: modelData.status === "active" ? mocha.green : mocha.overlay0
                                         }
                                         ColumnLayout {
-                                            spacing: 1
+                                            Layout.fillWidth: true
+                                            spacing: 0
                                             Text {
+                                                Layout.fillWidth: true
                                                 text: (modelData.agent === "opencode" ? "󰨞 " : "󰣇 ") +
                                                       (modelData.agent === "opencode" ? "OpenCode " : "Hermes ") +
                                                       modelData.id.replace("stats-pid-", "").substring(0, 8)
                                                 font.family: "JetBrains Mono"; font.pixelSize: 10; font.bold: true
                                                 color: mocha.text
+                                                elide: Text.ElideRight
                                             }
                                             Text {
+                                                Layout.fillWidth: true
                                                 text: modelData.model + "  ·  " + modelData.total_calls + " calls  ·  " +
                                                       Math.round(modelData.uptime_seconds / 60) + "m"
                                                 font.pixelSize: 9
                                                 color: mocha.overlay0
+                                                elide: Text.ElideRight
                                             }
                                         }
-                                        Item { Layout.fillWidth: true }
                                         Text {
                                             text: {
                                                 if (modelData.cost_saved > 0) return "󰄪 $" + modelData.cost_saved.toFixed(2)
