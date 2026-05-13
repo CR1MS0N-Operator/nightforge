@@ -9,8 +9,8 @@ background-color=##131318DD
 text-color=##e4e1e9
 border-size=2
 border-radius=8
-border-color=##bdc2ff
-progress-color=##bdc2ff
+border-color=##bcc2ff
+progress-color=##bcc2ff
 
 # Font
 font=MesloLGS NF 12

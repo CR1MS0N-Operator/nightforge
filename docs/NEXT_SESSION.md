@@ -1,141 +1,103 @@
-# NightForge Session Handoff — v3 Optimization & Polish
+# NightForge Session Handoff — Agent Sessions Dashboard v1
 
 ## Decisions Made
 
 | Decision | Rationale |
 |----------|----------|
-| Removed Hyprland cruft (32 packages) | Niri-only, no Hyprland dependencies needed |
-| Browsers: brave → waterfox | Privacy-conscious, lighter, Firefox-fork |
-| DNS: Quad9 (`https://dns.quad9.net/dns-query`) | Malware blocking, Swiss jurisdiction, no account |
-| All QML watchers → Timer-based | Eliminated `qs-watcher watch` process accumulation (was spawning 100s of orphans) |
-| IPC poller: 300ms → 500ms | Reduced CPU by ~40% without noticeable latency |
-| MatugenColors sync: 1s → 5s | Theme colors don't need 1s freshness |
-| Time updates: 1s (`HH:mm:ss`) → 10s (`HH:mm`) | Saves 10x QML binding reevaluations |
-| workspaces.sh: 0.5s → 2s polling | Was spawning `niri msg` + `jq` 120x/min |
-| Desktop detection: hide battery gauge + brightness | Auto-detects `/sys/class/power_supply/BAT*` |
-| Audio model: inline popup → `qs_manager.sh toggle` widget | Inline popup clipped by Wayland PanelWindow bounds |
-| Settings → MatugenColors import failed | Replaced with inline Catppuccin QtObject (Sscaler issue same pattern) |
-| Dashboard → added Operations section (Network, Services, C2s, Brief) | Removed Operations tab from Settings (redundant) |
+| File-based IPC for session-tracker | Consistent with ops-data.sh pattern — no HTTP server |
+| DashboardWidget.qml tracked in dotfiles/ | Reproducible deploys, symlink to ~/.config/quickshell |
+| QML tabs for Mermaid graphs | Separate views: Timeline, Tool Usage, Model Routing |
+| mermaid-rs-renderer v0.2.2 | Pure Rust, 100-1400x faster than mermaid-cli |
 
-## Troubleshooting Notes
+## Completed
 
-1. **Cliphist 41% CPU**: `wl-paste --watch` triggered repeatedly on Niri. Script replaced with 2s polling + content dedup. Service disabled — re-enable with `systemctl --user enable --now cliphist.service`.
-2. **Niri `action lock-screen` doesn't exist**: Niri has no built-in lock screen. Use `gtklock -d` instead.
-3. **QML inline popups don't render on Wayland**: PanelWindow has limited surface. All popups must be separate PanelWindows via `qs_manager.sh toggle`.
-4. **sinkPoller path**: QML Process may not execute shebangs. Use explicit `["bash", "/path/to/script"]` prefix.
-5. **virty-guest-start-tairn.service**: Real tairn autostart. Masked with `sudo systemctl mask`.
-6. **plocate-updatedb.timer**: Masked (service already masked). Boot error fixed.
-7. **niri-outputs TrimSpace bug**: `strings.TrimSpace` stripped 4-space indent needed by mode regex. Fixed with `TrimRight("\n\r")`.
-8. **Quickshell Process `running` property**: Setting `running = false; running = true` on Process creates duplicate children. Always use Timer instead.
+- **DashboardWidget.qml** — tracked in dotfiles, 6 `font.size`→`font.pixelSize` bugs fixed, `Layout.preferredHeight` binding loop resolved, 146-line Agent Sessions section added (SVG tabs + session list)
+- **Rust session-tracker** — reads OpenCode `stats-pid-*.json` + Hermes `session_*.json`, generates 3 Mermaid SVGs, writes `/tmp/session-tracker.*` atomically
+- **niri-modifications/README.md** — reproducible setup docs
+- **opencode upgraded** — 1.14.46 → 1.14.48 via AUR
 
-## Rencrypted Changes (What's Available for v4)
+## Open Issues
 
-- Waterfox Phase 3-6 (aesthetics/userChrome, hardening, performance) — planned, not executed here
-- Sliver and Havoc C2 installation (later phase — manual learning)
-- Microphone popup + push-to-talk + voicebox integration (own session)
-- niri-modifications/ directory structure for reproducible tooling
-- Fuzzel scaling on TV (quick fix in fuzzel.ini)
+### Priority 1: Dashboard Widget Text Overlapping
 
-## Git Commits (6 micro-commits created)
+**Root cause:** Operations sub-rectangles have zero implicitHeight. Inner ColumnLayout uses `anchors.fill: parent` on a 0-height parent, so text overflows into the next section.
+
+**Fix needed in `dotfiles/quickshell/.config/quickshell/modules/widgets/DashboardWidget.qml`:**
+
+Apply this pattern to 3 sub-rectangles:
+
+1. **Network & Environment** (line ~410):
+```qml
+// BEFORE:
+Rectangle {
+    Layout.fillWidth: true; radius: 10
+    color: mocha.surface1
+    ColumnLayout {
+        anchors.fill: parent; anchors.margins: 12; spacing: 8
+        // ...
+    }
+}
+// AFTER:
+Rectangle {
+    Layout.fillWidth: true; radius: 10
+    implicitHeight: networkCol.implicitHeight + 24
+    color: mocha.surface1
+    ColumnLayout {
+        id: networkCol
+        anchors.left: parent.left; anchors.right: parent.right
+        anchors.top: parent.top; anchors.margins: 12
+        spacing: 8
+        // ...
+    }
+}
+```
+
+2. **Service Status** (line ~439) — same pattern, `id: svcCol`
+
+3. **C2 Frameworks** (line ~466) — same pattern, `id: c2Col`
+
+Also fix the Containers+VMs layout (line ~238):
+```qml
+// BEFORE: Layout.fillHeight: true (steals all space from Operations)
+// AFTER:
+Layout.fillHeight: false
+Layout.preferredHeight: 250
+```
+
+This ensures Operations section gets consistent space. ListViews already scroll internally.
+
+### Priority 2: Settings Keybinds Text Overlapping
+
+File: `~/.config/quickshell/settings/SettingsPopup.qml` (3273 lines)
+Likely same `anchors.fill: parent` pattern on zero-height containers in the `kbListView` delegate or keybinds tab layout. Needs investigation.
+
+### Priority 3: Waterfox Video/LinkedIn Issues
+
+- Video loading fails on cyberwarfare.live / labs.cyberwarfare.live (but YouTube works)
+- LinkedIn textboxes broken
+- Waterfox Phase 3-6 (hardening, codecs, userChrome) planned but not executed
+- Likely cause: Enhanced Tracking Protection blocking cross-origin media or Widevine DRM not set up
+
+## Git Commits
 
 ```
-chore: remove dead bash watchers and qs_manager.sh
-feat(niri): add Waterfox window rules, fix PiP syntax error
-fix(systemd): wallpaper-rotate timer service + restart policy
-chore: update fuzzel config, btop theme, prune AGENTS.md cruft
-feat(go): add niri-outputs display detector + qs-watcher system monitor
-chore: update deploy script, matugen-sync fix, prune opencode config
+b933ad0 feat(qml): add agent sessions section with Mermaid SVG tabs to dashboard
+50bd571 feat(rust): add session-tracker backend for agent session data
+5dd8859 fix(qml): copy DashboardWidget.qml to repo, fix font bindings and layout loop
+9d6762d docs(niri): add niri-modifications README for reproducible setup
 ```
+
+Pushed to origin/main.
 
 ## Next Session Prompt
 
-**Goal:** Add Agent Sessions visualization to Operator Dashboard using Rust backend + native Mermaid rendering + QML SVG display.
-
-**Research queries for Perplexity:**
-
-1. `"mermaid-rs-renderer vs mermaid-cli native Rust Mermaid SVG rendering performance comparison 2026 for desktop dashboard real-time session tracking"`
-
-2. `"OpenCode agent session tracking API IPC local endpoint Go Rust collect active sessions history token usage metadata 2026"`
-
-3. `"Hermes Agent session monitoring REST API status active agents deployment tracking local queries"`
-
-4. `"Quickshell QML SVG rendering external Rust process IPC image provider data-driven dashboard architecture Wayland 2026"`
-
-**Architecture (from research):**
-
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Rust Backend (mermaid-rs-renderer + IPC)              │
-│  - Collects session state from OpenCode + Hermes       │
-│  - Generates Mermaid graph → SVG cache                 │
-│  - Exposes JSON API over Unix socket/HTTP              │
-├─────────────────────────────────────────────────────────┤
-│  QML Dashboard Widget (DashboardWidget.qml)            │
-│  - Polls Rust backend every 5-10s                      │
-│  - Displays SVG via Image provider                     │
-│  - Text list of active sessions + status               │
-│  - Click session → open terminal/log                   │
-└─────────────────────────────────────────────────────────┘
-```
+Continue from session handoff at docs/NEXT_SESSION.md.
+Fix the Operations section text overlapping in DashboardWidget.qml.
 
-**Implementation order:**
-1. Create Rust binary `session-tracker` that queries Hermes/OpenCode
-2. Implement Mermaid graph generation → SVG output
-3. Add IPC endpoint (Unix socket or HTTP localhost)
-4. Add dashboard section to DashboardWidget.qml
-5. Wire SVG rendering + text list to dashboard
+Root cause: sub-rectangles have zero implicitHeight because inner ColumnLayout
+uses anchors.fill:parent. Fix pattern: add implicitHeight: <colId>.implicitHeight + 24
+to each Rectangle, change anchors.fill:parent → anchors.left/right/top:parent.
 
-## Unresolved Items
-
-- **Dashboard not opening**: Click handler exists at line 742 but widget may have QML runtime error. Test with `echo "dashboard" > /tmp/qs_widget_state`.
-- **Dashboard Operations layout**: Text was overlapping — bumped font sizes and spacing, removed fixed Layout.preferredHeight constraints. Needs verification.
-- **Audio popup "No sinks"**: Fixed by adding explicit `bash` prefix to Process commands in AudioDevicePopup.qml and TopBar.qml. Verified working.
-- **Scaling**: `local.kdl` configured for DP-1 (180Hz) + HDMI-A-1 (4K@60, scale 1.5). Run `~/Github/nightforge/niri-modifications/outputs/niri-outputs` to verify.
-
-## Script Cleanup (Final Session)
-
-| Script | Action | Reason |
-|--------|--------|--------|
-| `focus_next_monitor.sh` | Removed | All commands commented. Dead Hyprland code. Niri handles monitor focus via keybinds. |
-| `exit.sh` | Removed | Niri quit command commented out. Not referenced anywhere. |
-| `lock.sh` | Removed | Not referenced. Power menu uses `gtklock -d`, keybinds use `lock-screen.sh`. |
-| `volume_listener.sh` | Removed | Depends on `pamixer` (not installed). Not referenced by any service or config. |
-| `reload.sh` | Fixed | Removed missing `Floating.qml` reference. Now reloads `Main.qml` + `TopBar.qml` only. |
-| `keybind-cheatsheet.sh` | Kept | Active via `Mod+Slash` keybind. Quick overlay — different UX from Settings keybinds tab. |
-
-## Next Session: Agent Sessions Dashboard
-
-### Copy-paste to start next conversation:
-
-```
-Continue from session handoff at docs/NEXT_SESSION.md. 
-Implement the Agent Sessions Dashboard following the architecture in the handoff.
-
-Key tasks:
-1. Fix DashboardWidget.qml not opening (test: echo "dashboard" > /tmp/qs_widget_state)
-2. Fix Operations section text overlapping (layout after preferredHeight removals)
-3. Build Rust backend for session tracking (OpenCode + Hermes Agent)
-4. Integrate native Mermaid graph rendering → SVG
-5. Add agent sessions section to DashboardWidget.qml
-6. Create niri-modifications/ README.md for reproducible setup
-
-Context: NightForge v3 Niri desktop, Quickshell QML bar, Go qs-watcher, Waterfox default browser.
-```
-
-### Research queries for Perplexity:
-
-```
-"mermaid-rs-renderer vs mermaid-cli native Rust Mermaid SVG rendering performance comparison 2026 for desktop dashboard real-time session tracking"
-```
-
-```
-"OpenCode agent session tracking API IPC local endpoint Go Rust collect active sessions history token usage metadata 2026"
-```
-
-```
-"Hermes Agent session monitoring REST API status active agents deployment tracking local queries"
-```
-
-```
-"Quickshell QML SVG rendering external Rust process IPC image provider data-driven dashboard architecture Wayland 2026"
+Also investigate SettingsPopup.qml keybinds overlapping (same pattern likely).
 ```

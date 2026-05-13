@@ -4,67 +4,67 @@
 # Main colors
 theme[main_bg]="#0d0e13"
 theme[main_fg]="#e4e1e9"
-theme[title]="#bdc2ff"
-theme[hi_fg]="#bdc2ff"
-theme[selected_bg]="#3c4279"
+theme[title]="#bcc2ff"
+theme[hi_fg]="#bcc2ff"
+theme[selected_bg]="#3b4279"
 theme[selected_fg]="#e4e1e9"
-theme[inactive_fg]="#91909a"
+theme[inactive_fg]="#90909a"
 theme[graph_text]="#c7c5d0"
-theme[proc_misc]="#91909a"
+theme[proc_misc]="#90909a"
 
 # Box borders
-theme[cpu_box]="#bdc2ff"
+theme[cpu_box]="#bcc2ff"
 theme[mem_box]="#c4c5dd"
-theme[net_box]="#e7b9d6"
-theme[proc_box]="#bdc2ff"
-theme[div_line]="#91909a"
+theme[net_box]="#e6bad6"
+theme[proc_box]="#bcc2ff"
+theme[div_line]="#90909a"
 
 # Meter
 theme[meter_bg]="#1f1f25"
-theme[meter_fg]="#bdc2ff"
+theme[meter_fg]="#bcc2ff"
 
 # Status
 theme[error]="#ffb4ab"
-theme[warning]="#e7b9d6"
+theme[warning]="#e6bad6"
 theme[good]="#c4c5dd"
 
 # Gradients
-theme[temp_start]="#e7b9d6"
+theme[temp_start]="#e6bad6"
 theme[temp_mid]="#c4c5dd"
 theme[temp_end]="#ffb4ab"
 
-theme[cpu_start]="#bdc2ff"
+theme[cpu_start]="#bcc2ff"
 theme[cpu_mid]="#c4c5dd"
-theme[cpu_end]="#e7b9d6"
+theme[cpu_end]="#e6bad6"
 
 theme[mem_start]="#c4c5dd"
-theme[mem_mid]="#bdc2ff"
-theme[mem_end]="#e7b9d6"
+theme[mem_mid]="#bcc2ff"
+theme[mem_end]="#e6bad6"
 
-theme[free_start]="#bdc2ff"
+theme[free_start]="#bcc2ff"
 theme[free_mid]="#c4c5dd"
-theme[free_end]="#e7b9d6"
+theme[free_end]="#e6bad6"
 
-theme[cached_start]="#bdc2ff"
+theme[cached_start]="#bcc2ff"
 theme[cached_mid]="#c4c5dd"
-theme[cached_end]="#e7b9d6"
+theme[cached_end]="#e6bad6"
 
-theme[available_start]="#bdc2ff"
+theme[available_start]="#bcc2ff"
 theme[available_mid]="#c4c5dd"
-theme[available_end]="#e7b9d6"
+theme[available_end]="#e6bad6"
 
-theme[used_start]="#bdc2ff"
+theme[used_start]="#bcc2ff"
 theme[used_mid]="#c4c5dd"
-theme[used_end]="#e7b9d6"
+theme[used_end]="#e6bad6"
 
-theme[download_start]="#e7b9d6"
-theme[download_mid]="#bdc2ff"
+theme[download_start]="#e6bad6"
+theme[download_mid]="#bcc2ff"
 theme[download_end]="#c4c5dd"
 
-theme[upload_start]="#e7b9d6"
-theme[upload_mid]="#bdc2ff"
+theme[upload_start]="#e6bad6"
+theme[upload_mid]="#bcc2ff"
 theme[upload_end]="#c4c5dd"
 
-theme[process_start]="#bdc2ff"
+theme[process_start]="#bcc2ff"
 theme[process_mid]="#c4c5dd"
-theme[process_end]="#e7b9d6"
+theme[process_end]="#e6bad6"

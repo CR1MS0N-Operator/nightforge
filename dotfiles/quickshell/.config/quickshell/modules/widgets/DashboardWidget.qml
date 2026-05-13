@@ -234,11 +234,11 @@ Item {
             }
 
             // --- Main Content ---
-            // Containers + VMs row (top ~65%)
+            // Containers + VMs row
             RowLayout {
                 id: mainContent
                 Layout.fillWidth: true
-                Layout.fillHeight: true
+                Layout.preferredHeight: 250
                 spacing: 12
 
                 // --- Containers Panel ---
@@ -409,9 +409,13 @@ Item {
                     // Network & Environment
                     Rectangle {
                         Layout.fillWidth: true; radius: 10
+                        implicitHeight: networkCol.implicitHeight + 24
                         color: mocha.surface1
                         ColumnLayout {
-                            anchors.fill: parent; anchors.margins: 12; spacing: 8
+                            id: networkCol
+                            anchors.left: parent.left; anchors.right: parent.right
+                            anchors.top: parent.top; anchors.margins: 12
+                            spacing: 8
                             Text {
                                 text: "󰈀  Network & Environment"
                                 font.family: "JetBrains Mono"; font.pixelSize: 12; font.bold: true
@@ -438,9 +442,13 @@ Item {
                     // Service Status
                     Rectangle {
                         Layout.fillWidth: true; radius: 10
+                        implicitHeight: svcCol.implicitHeight + 24
                         color: mocha.surface1
                         ColumnLayout {
-                            anchors.fill: parent; anchors.margins: 12; spacing: 8
+                            id: svcCol
+                            anchors.left: parent.left; anchors.right: parent.right
+                            anchors.top: parent.top; anchors.margins: 12
+                            spacing: 8
                             Text {
                                 text: "󰅟  Service Status"
                                 font.family: "JetBrains Mono"; font.pixelSize: 12; font.bold: true
@@ -465,9 +473,13 @@ Item {
                     // C2 Frameworks
                     Rectangle {
                         Layout.fillWidth: true; radius: 10
+                        implicitHeight: c2Col.implicitHeight + 24
                         color: mocha.surface1
                         ColumnLayout {
-                            anchors.fill: parent; anchors.margins: 12; spacing: 8
+                            id: c2Col
+                            anchors.left: parent.left; anchors.right: parent.right
+                            anchors.top: parent.top; anchors.margins: 12
+                            spacing: 8
                             Text {
                                 text: "󱙝  C2 Frameworks"
                                 font.family: "JetBrains Mono"; font.pixelSize: 12; font.bold: true
