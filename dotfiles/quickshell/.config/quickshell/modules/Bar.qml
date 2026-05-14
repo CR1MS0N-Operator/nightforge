@@ -57,22 +57,22 @@ Variants {
             // === IPC DISPATCH ===
             function dispatch(cmd) {
                 var p = Qt.createQmlObject('import Quickshell.Io; Process {}', win)
-                p.command = ["sh", "-c", "/home/ForeverLX/Github/nightforge/dotfiles/quickshell/.config/quickshell/scripts/qs_manager.sh " + cmd]
+                p.command = ["sh", "-c", "echo " + cmd + " > /tmp/qs_widget_state"]
                 p.running = true
             }
 
             // === WORKSPACE POLLING ===
             Process {
                 id: wsProc
-                command: ["sh", "-c", "niri msg --json workspaces | jq '[.[] | {id: .id, name: (.name | tostring), active: false, occupied: (.windows > 0)}]'"]
+                command: ["sh", "-c", "niri msg --json workspaces | jq '[.[] | {id: .id, name: (.name // (.id | tostring)), active: .is_focused, occupied: (.active_window_id != null)}]' 2>/dev/null || echo '[]'"]
                 running: true
                 stdout: StdioCollector {
                     onStreamFinished: {
                         try {
-                            var data = JSON.parse(text)
-                            // Update active flag based on activeWsId
+                            var data = JSON.parse(text.trim())
+                            win.activeWsId = 0
                             for (var i = 0; i < data.length; i++) {
-                                data[i].active = (data[i].id === win.activeWsId)
+                                if (data[i].active) win.activeWsId = data[i].id
                             }
                             win.workspaces = data
                         } catch(e) {}
@@ -80,35 +80,6 @@ Variants {
                 }
             }
             Timer { interval: 500; running: true; repeat: true; onTriggered: wsProc.running = true }
-
-            Process {
-                id: activeWsProc
-                command: ["sh", "-c", "niri msg --json active-workspace | jq '.id'"]
-                running: true
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        try {
-                            var id = parseInt(text.trim())
-                            if (!isNaN(id)) {
-                                win.activeWsId = id
-                                // Update workspaces array active flags
-                                var updated = []
-                                for (var i = 0; i < win.workspaces.length; i++) {
-                                    var ws = win.workspaces[i]
-                                    updated.push({
-                                        id: ws.id,
-                                        name: ws.name,
-                                        active: ws.id === id,
-                                        occupied: ws.occupied
-                                    })
-                                }
-                                win.workspaces = updated
-                            }
-                        } catch(e) {}
-                    }
-                }
-            }
-            Timer { interval: 500; running: true; repeat: true; onTriggered: activeWsProc.running = true }
 
             // === VOLUME POLLING ===
             Process {
@@ -183,7 +154,7 @@ Variants {
             // === MEDIA POLLING (MPRIS) ===
             Process {
                 id: mediaProc
-                command: ["sh", "-c", "playerctl -s metadata --format '{{title}}\\n{{artist}}\\n{{status}}\\n{{mpris:artUrl}}' 2>/dev/null || echo ''"]
+                command: ["sh", "-c", "playerctl -s metadata --format '{{title}}\\n{{artist}}\\n{{status}}\\n{{mpris:artUrl}}' 2>/dev/null || (t=$(mpc current 2>/dev/null); [ -n \"$t\" ] && printf '%s\\n%s\\nPlaying\\n' \"$t\" \"$(mpc -f '%artist%' current 2>/dev/null)\")"]
                 running: true
                 stdout: StdioCollector {
                     onStreamFinished: {
@@ -244,17 +215,17 @@ Variants {
 
                     BarButton {
                         icon: "\uF297"
-                        mocha: win.mocha
+                        
                         onClicked: win.dispatch("help")
                     }
                     BarButton {
                         icon: "\uF002"
-                        mocha: win.mocha
+                        
                         onClicked: win.dispatch("launcher")
                     }
                     BarButton {
                         icon: "\uF013"
-                        mocha: win.mocha
+                        
                         onClicked: win.dispatch("controlcenter")
                     }
                 }
@@ -269,8 +240,8 @@ Variants {
                     opacity: win.startupComplete ? 1 : 0
                     scale: win.startupComplete ? 1 : 0.9
 
-                    Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic; delay: 50 } }
-                    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack; delay: 50 } }
+                    Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 50 } NumberAnimation { duration: 400; easing.type: Easing.OutCubic } } }
+                    Behavior on scale { SequentialAnimation { PauseAnimation { duration: 50 } NumberAnimation { duration: 400; easing.type: Easing.OutBack } } }
 
                     Repeater {
                         id: wsRepeater
@@ -319,8 +290,8 @@ Variants {
                     opacity: win.startupComplete && visible ? 1 : 0
                     scale: win.startupComplete && visible ? 1 : 0.9
 
-                    Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic; delay: 100 } }
-                    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack; delay: 100 } }
+                    Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 100 } NumberAnimation { duration: 400; easing.type: Easing.OutCubic } } }
+                    Behavior on scale { SequentialAnimation { PauseAnimation { duration: 100 } NumberAnimation { duration: 400; easing.type: Easing.OutBack } } }
 
                     // Album art
                     Rectangle {
@@ -342,7 +313,7 @@ Variants {
 
                     // Track info
                     Column {
-                        anchors.verticalCenter: parent.verticalCenter
+                        
                         spacing: 2
                         Text {
                             text: win.mediaTitle
@@ -363,13 +334,13 @@ Variants {
 
                     // Media controls
                     Row {
-                        anchors.verticalCenter: parent.verticalCenter
+                        
                         spacing: 4
 
                         BarButton {
                             icon: "\u23EE"
                             size: 22
-                            mocha: win.mocha
+                            
                             onClicked: {
                                 var p = Qt.createQmlObject('import Quickshell.Io; Process {}', win)
                                 p.command = ["playerctl", "previous"]
@@ -380,7 +351,7 @@ Variants {
                             icon: win.mediaPlaying ? "\u23F8" : "\u25B6"
                             size: 26
                             accentColor: mocha.mauve
-                            mocha: win.mocha
+                            
                             onClicked: {
                                 var p = Qt.createQmlObject('import Quickshell.Io; Process {}', win)
                                 p.command = ["playerctl", "play-pause"]
@@ -390,7 +361,7 @@ Variants {
                         BarButton {
                             icon: "\u23ED"
                             size: 22
-                            mocha: win.mocha
+                            
                             onClicked: {
                                 var p = Qt.createQmlObject('import Quickshell.Io; Process {}', win)
                                 p.command = ["playerctl", "next"]
@@ -399,10 +370,6 @@ Variants {
                         }
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: win.dispatch("music")
-                    }
                 }
 
                 // === STATUS PILLS ===
@@ -415,40 +382,40 @@ Variants {
                     opacity: win.startupComplete ? 1 : 0
                     scale: win.startupComplete ? 1 : 0.9
 
-                    Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic; delay: 150 } }
-                    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack; delay: 150 } }
+                    Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 150 } NumberAnimation { duration: 400; easing.type: Easing.OutCubic } } }
+                    Behavior on scale { SequentialAnimation { PauseAnimation { duration: 150 } NumberAnimation { duration: 400; easing.type: Easing.OutBack } } }
 
                     StatusPill {
                         icon: "\uF1EB"
                         value: win.networkStatus
-                        color: win.networkStatus === "Down" ? mocha.red : mocha.green
-                        mocha: win.mocha
+                        accentColor: win.networkStatus === "Down" ? mocha.red : mocha.green
+                        
                         onClicked: win.dispatch("network")
                     }
                     StatusPill {
                         icon: "\uF294"
                         value: win.btStatus === "on" ? "On" : "Off"
-                        color: win.btStatus === "on" ? mocha.blue : mocha.overlay0
-                        mocha: win.mocha
+                        accentColor: win.btStatus === "on" ? mocha.blue : mocha.overlay0
+                        
                     }
                     StatusPill {
                         icon: win.volMute ? "\uF6A9" : "\uF028"
                         value: win.volMute ? "Mute" : (win.volPct + "%")
-                        color: win.volMute ? mocha.red : mocha.mauve
-                        mocha: win.mocha
-                        onClicked: win.dispatch("controlcenter")
+                        accentColor: win.volMute ? mocha.red : mocha.mauve
+                        
+                        onClicked: win.dispatch("music")
                     }
                     StatusPill {
                         icon: "\uF240"
                         value: win.battery
-                        color: mocha.text
-                        mocha: win.mocha
+                        accentColor: mocha.text
+                        
                     }
                     StatusPill {
                         icon: "\uF11C"
                         value: win.kbLayout.toUpperCase()
-                        color: mocha.subtext0
-                        mocha: win.mocha
+                        accentColor: mocha.subtext0
+                        
                     }
                 }
 
@@ -464,8 +431,8 @@ Variants {
                     opacity: win.startupComplete ? 1 : 0
                     scale: win.startupComplete ? 1 : 0.9
 
-                    Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic; delay: 200 } }
-                    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack; delay: 200 } }
+                    Behavior on opacity { SequentialAnimation { PauseAnimation { duration: 200 } NumberAnimation { duration: 400; easing.type: Easing.OutCubic } } }
+                    Behavior on scale { SequentialAnimation { PauseAnimation { duration: 200 } NumberAnimation { duration: 400; easing.type: Easing.OutBack } } }
                 }
             }
         }
