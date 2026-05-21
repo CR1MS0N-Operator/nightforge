@@ -32,6 +32,7 @@ function getLayout(name, mx, my, mw, mh, userScale) {
         "network":       { w: s(380, scale), h: s(480, scale), rx: mw - s(400, scale), ry: s(60, scale) },
         "statusmonitor": { w: s(520, scale), h: s(600, scale), rx: Math.floor((mw - s(520, scale)) / 2), ry: s(60, scale) },
         "monitor":       { w: s(360, scale), h: s(320, scale), rx: mw - s(380, scale), ry: s(60, scale) },
+        "dashboard":     { w: s(600, scale), h: s(500, scale), rx: Math.floor((mw - s(600, scale)) / 2), ry: Math.floor((mh - s(500, scale)) / 2) },
         "hidden":        { w: 1, h: 1, rx: -5000, ry: -5000 }
     };
 

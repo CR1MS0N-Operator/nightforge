@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 
@@ -15,21 +16,27 @@ Item {
     // =========================================================
     // Data State
     // =========================================================
-    property var containers: []
-    property var vms: []
+    property int activeTab: 0
+    property var tabNames: ["Infrastructure", "Agents", "Network", "Services", "C2"]
+    property var tabIcons: ["󰢱", "󱚝", "󰋙", "󰅟", "󱙝"]
+    property int expandedAgent: -1
+    property int expandedPeer: -1
+
+    property var vmList: []
+    property var containerList: []
+    property var serviceList: []
+    property var networkState: ({})
+    property var c2List: []
+    property var tmuxList: []
+
+    property string containerStr: ""
+    property string vmStr: ""
+
     property string cpuStr: "--%"
     property string ramStr: "--"
     property string uptimeStr: "--"
-    property string localIp: "--"
-    property string wgStatus: "Disconnected"
-    property string dnsServer: "--"
-    property string opsContainerCount: "--"
-    property string opsVmCount: "--"
-    property string opsUptime: "--"
-    property string serviceStr: ""
-    property string c2Status: ""
+
     property var agentSessions: []
-    property int expandedAgent: -1
 
     function agentSess(agent) {
         var r = [];
@@ -54,118 +61,42 @@ Item {
     }
 
     // =========================================================
-    // Parse Functions
-    // =========================================================
-    function parseContainers(text) {
-        var t = text.trim()
-        if (t === "") { containers = []; return }
-        var lines = t.split("\n")
-        var result = []
-        for (var i = 0; i < lines.length; i++) {
-            var parts = lines[i].split("|")
-            if (parts.length >= 3) {
-                var ports = parts.length >= 4 ? parts[3] : ""
-                var status = parts[2]
-                var isUp = status.indexOf("Up") === 0
-                result.push({ name: parts[0], image: parts[1], status: status, ports: ports, isUp: isUp })
-            }
-        }
-        containers = result
-    }
-
-    function parseVMs(text) {
-        var lines = text.trim().split("\n")
-        var result = []
-        for (var i = 2; i < lines.length; i++) {
-            var line = lines[i].trim()
-            if (line === "") continue
-            var parts = line.split(/\s+/)
-            if (parts.length >= 3) {
-                result.push({ id: parts[0], name: parts[1], state: parts.slice(2).join(" ") })
-            } else if (parts.length >= 2) {
-                result.push({ id: parts[0], name: parts[1], state: "unknown" })
-            }
-        }
-        vms = result
-    }
-
-    function parseSys(text) {
-        var parts = text.trim().split("|")
-        if (parts.length >= 3) {
-            cpuStr = parts[0] + "%"
-            ramStr = parts[2] + "/" + parts[3] + " GB"
-        }
-    }
-
-    function parseUptime(text) {
-        var secs = parseFloat(text.trim().split(" ")[0]) || 0
-        var d = Math.floor(secs / 86400)
-        var h = Math.floor((secs % 86400) / 3600)
-        var m = Math.floor((secs % 3600) / 60)
-        uptimeStr = d + "d " + h + "h " + m + "m"
-    }
-
-    function parseOpsData(text) {
-        var lines = text.trim().split("\n")
-        for (var i = 0; i < lines.length; i++) {
-            var l = lines[i].trim()
-            if (l.indexOf("NET=") === 0) dashboard.localIp = l.substring(4)
-            else if (l.indexOf("WG=") === 0) dashboard.wgStatus = l.substring(3)
-            else if (l.indexOf("DNS=") === 0) dashboard.dnsServer = l.substring(4)
-            else if (l.indexOf("CT=") === 0) dashboard.opsContainerCount = l.substring(3)
-            else if (l.indexOf("VM=") === 0) dashboard.opsVmCount = l.substring(3)
-            else if (l.indexOf("UP=") === 0) dashboard.opsUptime = l.substring(3)
-        }
-    }
-
-    function parseServices(text) {
-        var lines = text.trim().split("\n")
-        var parts = []
-        for (var i = 0; i < lines.length; i++) {
-            var l = lines[i].trim().split("=")
-            if (l.length >= 2) parts.push({ name: l[0], status: l.slice(1).join("=") })
-        }
-        dashboard.serviceStr = JSON.stringify(parts)
-    }
-
-    // =========================================================
     // Data Processes
     // =========================================================
     Process {
-        id: containerPoll; running: true
-        command: ["sh", "-c", "podman ps --format '{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}' 2>/dev/null || echo ''"]
-        stdout: StdioCollector { onStreamFinished: parseContainers(text) }
+        id: dashPoll
+        running: true
+        command: [dashCtlPath, "poll"]
+        property string dashCtlPath: Quickshell.env("HOME") + "/Github/nightforge/niri-modifications/scripts/dashboard-ctl"
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var d = JSON.parse(text.trim())
+                    dashboard.vmList = d.vms || []
+                    dashboard.containerList = d.containers || []
+                    dashboard.serviceList = d.services || []
+                    dashboard.networkState = d.network || {}
+                    dashboard.c2List = d.c2 || []
+                    dashboard.tmuxList = d.tmux || []
+                    dashboard.containerStr = (d.containers || []).length + " running"
+                    dashboard.vmStr = (d.vms || []).filter(function(v){ return v.status === "running" }).length + " / " + (d.vms || []).length
+                } catch(e) {}
+            }
+        }
     }
+
     Process {
-        id: vmPoll; running: true
-        command: ["sh", "-c", "virsh list --all 2>/dev/null || echo ''"]
-        stdout: StdioCollector { onStreamFinished: parseVMs(text) }
+        id: dashAction
+        running: false
+        property bool dashActionOk: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { var r = JSON.parse(text.trim()); dashActionOk = r.ok === true }
+                catch(e) { dashActionOk = false }
+            }
+        }
     }
-    Process {
-        id: sysPoll; running: true
-        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/qs-watcher", "fetch", "sys"]
-        stdout: StdioCollector { onStreamFinished: parseSys(text) }
-    }
-    Process {
-        id: uptimePoll; running: true
-        command: ["cat", "/proc/uptime"]
-        stdout: StdioCollector { onStreamFinished: parseUptime(text) }
-    }
-    Process {
-        id: opsDataPoll; running: true
-        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/ops-data.sh"]
-        stdout: StdioCollector { onStreamFinished: parseOpsData(text) }
-    }
-    Process {
-        id: opsSvcPoll; running: true
-        command: [Quickshell.env("HOME") + "/.config/quickshell/scripts/ops-services.sh"]
-        stdout: StdioCollector { onStreamFinished: parseServices(text) }
-    }
-    Process {
-        id: c2Poll; running: true
-        command: ["sh", "-c", "C2S='[]'; [ -f /opt/mythic/.env ] && C2=$(echo 'Mythic' | jq -Rsc '{name:.,status:\"active\"}' 2>/dev/null) && C2S=\"[$C2]\"; echo \"$C2S\""]
-        stdout: StdioCollector { onStreamFinished: { var t = text.trim(); if (t) dashboard.c2Status = t; } }
-    }
+
     Process {
         id: sessionPoll
         running: true
@@ -188,13 +119,7 @@ Item {
     Timer {
         interval: 5000; running: true; repeat: true
         onTriggered: {
-            containerPoll.running = false; containerPoll.running = true
-            vmPoll.running = false; vmPoll.running = true
-            sysPoll.running = false; sysPoll.running = true
-            uptimePoll.running = false; uptimePoll.running = true
-            opsDataPoll.running = false; opsDataPoll.running = true
-            opsSvcPoll.running = false; opsSvcPoll.running = true
-            c2Poll.running = false; c2Poll.running = true
+            dashPoll.running = false; dashPoll.running = true
             sessionPoll.running = false; sessionPoll.running = true
             sessionRead.running = true
         }
@@ -239,461 +164,688 @@ Item {
                     MouseArea {
                         id: refreshMouse; anchors.fill: parent; hoverEnabled: true
                         onClicked: {
-                            containerPoll.running = false; containerPoll.running = true
-                            vmPoll.running = false; vmPoll.running = true
-                            sysPoll.running = false; sysPoll.running = true
-                            uptimePoll.running = false; uptimePoll.running = true
-                            opsDataPoll.running = false; opsDataPoll.running = true
-                            opsSvcPoll.running = false; opsSvcPoll.running = true
+                            dashPoll.running = false; dashPoll.running = true
+                            sessionPoll.running = false; sessionPoll.running = true
+                            sessionRead.running = true
                         }
                     }
                 }
             }
 
-            // --- Main Content ---
-            // Containers + VMs row
-            RowLayout {
-                id: mainContent
-                Layout.fillWidth: true
-                Layout.preferredHeight: 250
-                spacing: 12
-
-                // --- Containers Panel ---
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    radius: 12
-                    color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.5)
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 8
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Text {
-                                text: "  Containers"
-                                font.family: "Iosevka Nerd Font"; font.pixelSize: 12; font.bold: true
-                                color: mocha.text
-                            }
-                            Item { Layout.fillWidth: true }
-                            Text {
-                                text: containers.length
-                                font.family: "JetBrains Mono"; font.pixelSize: 11; font.weight: Font.Black
-                                color: containers.length > 0 ? mocha.green : mocha.overlay0
-                            }
-                        }
-
-                        ListView {
-                            Layout.fillWidth: true; Layout.fillHeight: true
-                            clip: true; spacing: 4
-                            model: containers
-
-                            delegate: Rectangle {
-                                width: parent ? parent.width : 0
-                                height: 36; radius: 8
-                                color: mocha.surface1
-
-                                RowLayout {
-                                    anchors.fill: parent; anchors.margins: 8; spacing: 6
-                                    Rectangle {
-                                        width: 8; height: 8; radius: 4
-                                        color: modelData.isUp ? mocha.green : mocha.red
-                                    }
-                                    ColumnLayout {
-                                        spacing: 1
-                                        Text {
-                                            text: modelData.name
-                                            font.family: "JetBrains Mono"; font.pixelSize: 11; font.weight: Font.Bold
-                                            color: mocha.text
-                                        }
-                                        Text {
-                                            text: modelData.image
-                                            font.family: "JetBrains Mono"; font.pixelSize: 9
-                                            color: mocha.overlay0; elide: Text.ElideRight
-                                        }
-                                    }
-                                    Item { Layout.fillWidth: true }
-                                    Text {
-                                        text: modelData.ports
-                                        font.family: "JetBrains Mono"; font.pixelSize: 9
-                                        color: mocha.teal; elide: Text.ElideRight
-                                        visible: modelData.ports !== ""
-                                    }
-                                }
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "No running containers"
-                                font.family: "JetBrains Mono"; font.pixelSize: 11
-                                color: mocha.overlay0
-                                visible: parent.count === 0
-                            }
-                        }
-                    }
-                }
-
-                // --- VMs Panel ---
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    radius: 12
-                    color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.5)
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 8
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Text {
-                                text: "󰻉  Virtual Machines"
-                                font.family: "Iosevka Nerd Font"; font.pixelSize: 12; font.bold: true
-                                color: mocha.text
-                            }
-                            Item { Layout.fillWidth: true }
-                            Text {
-                                text: vms.length
-                                font.family: "JetBrains Mono"; font.pixelSize: 11; font.weight: Font.Black
-                                color: vms.length > 0 ? mocha.mauve : mocha.overlay0
-                            }
-                        }
-
-                        ListView {
-                            Layout.fillWidth: true; Layout.fillHeight: true
-                            clip: true; spacing: 4
-                            model: vms
-
-                            delegate: Rectangle {
-                                width: parent ? parent.width : 0
-                                height: 36; radius: 8
-                                color: mocha.surface1
-
-                                RowLayout {
-                                    anchors.fill: parent; anchors.margins: 8; spacing: 8
-                                    Rectangle {
-                                        width: 8; height: 8; radius: 4
-                                        color: modelData.state === "running" ? mocha.green : mocha.overlay0
-                                    }
-                                    Text {
-                                        text: modelData.name
-                                        font.family: "JetBrains Mono"; font.pixelSize: 11; font.weight: Font.Bold
-                                        color: mocha.text; Layout.fillWidth: true
-                                    }
-                                    Text {
-                                        text: modelData.state
-                                        font.family: "JetBrains Mono"; font.pixelSize: 10
-                                        color: modelData.state === "running" ? mocha.green : mocha.overlay0
-                                    }
-                                }
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "No VMs configured"
-                                font.family: "JetBrains Mono"; font.pixelSize: 11
-                                color: mocha.overlay0
-                                visible: parent.count === 0
-                            }
-                        }
-                    }
-                }
-            }
-
-            // --- Operations Section ---
+            // --- Always-visible summary bar ---
             Rectangle {
-                Layout.fillWidth: true
-                Layout.minimumHeight: 360
-                implicitHeight: opsCol.implicitHeight + 32
-                radius: 12
-                color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.5)
-
-                ColumnLayout {
-                    id: opsCol
-                    anchors.left: parent.left; anchors.right: parent.right
-                    anchors.top: parent.top; anchors.margins: 16
-                    spacing: 12
-
-                    Text {
-                        text: "󱛛  Operations"
-                        font.family: "Iosevka Nerd Font"; font.pixelSize: 14; font.bold: true
-                        color: mocha.text
+                Layout.fillWidth: true; Layout.preferredHeight: 80
+                radius: 10; color: mocha.surface1
+                RowLayout {
+                    anchors.fill: parent; anchors.margins: 12; spacing: 16
+                    ColumnLayout { spacing: 4
+                        Text { text: "󰡨 Containers"; font.pixelSize: 11; color: mocha.subtext0; font.bold: true }
+                        Text { text: dashboard.containerStr; font.pixelSize: 10; color: mocha.text }
                     }
+                    ColumnLayout { spacing: 4
+                        Text { text: "󰻉 VMs"; font.pixelSize: 11; color: mocha.subtext0; font.bold: true }
+                        Text { text: dashboard.vmStr; font.pixelSize: 10; color: mocha.text }
+                    }
+                    Item { Layout.fillWidth: true }
+                    ColumnLayout { spacing: 4
+                        Text { text: "󰻠 " + cpuStr; font.pixelSize: 10; color: mocha.overlay0 }
+                        Text { text: " " + ramStr; font.pixelSize: 10; color: mocha.overlay0 }
+                        Text { text: "󰔟 " + uptimeStr; font.pixelSize: 10; color: mocha.overlay0 }
+                    }
+                }
+            }
 
-                    // Network & Environment
-                    Rectangle {
-                        Layout.fillWidth: true; radius: 10
-                        implicitHeight: networkCol.implicitHeight + 24
-                        color: mocha.surface1
-                        ColumnLayout {
-                            id: networkCol
-                            anchors.left: parent.left; anchors.right: parent.right
-                            anchors.top: parent.top; anchors.margins: 12
-                            spacing: 8
-                            Text {
-                                text: "󰈀  Network & Environment"
-                                font.family: "JetBrains Mono"; font.pixelSize: 12; font.bold: true
-                                color: mocha.subtext0
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true; spacing: 12
-
-                                Text { text: "IP:"; font.pixelSize: 11; color: mocha.overlay0 }
-                                Text { text: dashboard.localIp; font.pixelSize: 11; color: mocha.text }
-                                Item { Layout.fillWidth: true }
-                                Text { text: "WG:"; font.pixelSize: 11; color: mocha.overlay0 }
-                                Rectangle { width: 8; height: 8; radius: 4; color: dashboard.wgStatus === "Connected" ? mocha.green : mocha.red }
-                                Text { text: dashboard.wgStatus; font.pixelSize: 11; color: dashboard.wgStatus === "Connected" ? mocha.green : mocha.subtext0 }
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true; spacing: 12
-                                Text { text: "DNS:"; font.pixelSize: 11; color: mocha.overlay0 }
-                                Text { text: dashboard.dnsServer; font.pixelSize: 11; color: mocha.text }
-                            }
+            // --- Tab bar ---
+            RowLayout {
+                Layout.fillWidth: true; spacing: 4
+                Repeater {
+                    model: 5
+                    delegate: Rectangle {
+                        id: tabBtn
+                        height: 28; radius: 6
+                        color: dashboard.activeTab === index
+                            ? Qt.rgba(mocha.mauve.r, mocha.mauve.g, mocha.mauve.b, 0.3)
+                            : "transparent"
+                        implicitWidth: tabContent.implicitWidth + 16
+                        RowLayout {
+                            id: tabContent; anchors.centerIn: parent; spacing: 6
+                            Text { text: dashboard.tabIcons[index]; font.pixelSize: 11; color: dashboard.activeTab === index ? mocha.mauve : mocha.overlay0 }
+                            Text { text: dashboard.tabNames[index]; font.pixelSize: 10; font.bold: dashboard.activeTab === index; color: dashboard.activeTab === index ? mocha.mauve : mocha.text }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: dashboard.activeTab = index
                         }
                     }
+                }
+                Item { Layout.fillWidth: true }
+            }
 
-                    // Service Status
-                    Rectangle {
-                        Layout.fillWidth: true; radius: 10
-                        implicitHeight: svcCol.implicitHeight + 24
-                        color: mocha.surface1
-                        ColumnLayout {
-                            id: svcCol
-                            anchors.left: parent.left; anchors.right: parent.right
-                            anchors.top: parent.top; anchors.margins: 12
-                            spacing: 8
-                            Text {
-                                text: "󰅟  Service Status"
-                                font.family: "JetBrains Mono"; font.pixelSize: 12; font.bold: true
-                                color: mocha.subtext0
-                            }
-                            Flow {
-                                Layout.fillWidth: true; spacing: 10
-                                Repeater {
-                                    model: {
-                                        try { return JSON.parse(dashboard.serviceStr); } catch(e) { return []; }
-                                    }
-                                    delegate: RowLayout {
-                                        spacing: 5
-                                        Rectangle { width: 8; height: 8; radius: 4; color: modelData.status === "active" ? mocha.green : mocha.red }
-                                        Text { text: modelData.name; font.pixelSize: 11; color: modelData.status === "active" ? mocha.text : mocha.overlay0 }
+            // --- Tab content area ---
+            Rectangle {
+                Layout.fillWidth: true; Layout.fillHeight: true
+                radius: 10; color: mocha.surface1; clip: true
+
+Flickable {
+    anchors.fill: parent; anchors.margins: 8
+    contentWidth: infraCol.width; contentHeight: infraCol.height
+    clip: true; visible: dashboard.activeTab === 0
+
+    ColumnLayout {
+        id: infraCol; width: parent.width; spacing: 12
+
+        // --- Virtual Machines ---
+        Rectangle {
+            Layout.fillWidth: true; implicitHeight: vmSection.implicitHeight + 20
+            radius: 8; color: mocha.surface0
+            ColumnLayout {
+                id: vmSection
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.top: parent.top; anchors.margins: 12; spacing: 8
+                Text {
+                    text: "󰻉  Virtual Machines"
+                    font.pixelSize: 12; font.bold: true; color: mocha.subtext0
+                }
+                Repeater {
+                    model: dashboard.vmList
+                    delegate: Rectangle {
+                        Layout.fillWidth: true; height: 40; radius: 6
+                        color: mocha.base
+                        RowLayout {
+                            anchors.fill: parent; anchors.margins: 8; spacing: 8
+                            Rectangle { width: 8; height: 8; radius: 4
+                                color: modelData.status === "running" ? mocha.green : mocha.overlay0 }
+                            Text { text: modelData.name; font.pixelSize: 11; font.bold: true; color: mocha.text }
+                            Text { text: modelData.vcpus + " vCPU  ·  " + modelData.memory + " MB"
+                                font.pixelSize: 9; color: mocha.overlay0 }
+                            Item { Layout.fillWidth: true }
+                            Rectangle {
+                                height: 24; radius: 4; implicitWidth: btnText.implicitWidth + 16
+                                color: modelData.status === "running" ? mocha.red : mocha.green
+                                opacity: 0.2
+                                Text { id: btnText; anchors.centerIn: parent
+                                    text: modelData.status === "running" ? "Stop" : "Start"
+                                    font.pixelSize: 9; color: modelData.status === "running" ? mocha.red : mocha.green }
+                                MouseArea { anchors.fill: parent
+                                    onClicked: {
+                                        dashAction.command = [dashPoll.dashCtlPath, "vm",
+                                            modelData.status === "running" ? "stop" : "start", modelData.name]
+                                        dashAction.running = false; dashAction.running = true
                                     }
                                 }
                             }
                         }
                     }
+                }
+                Text { text: "No VMs configured"; font.pixelSize: 10; color: mocha.overlay0
+                    visible: dashboard.vmList.length === 0 }
+            }
+        }
 
-                    // C2 Frameworks
+        // --- Containers ---
+        Rectangle {
+            Layout.fillWidth: true; implicitHeight: ctSection.implicitHeight + 20
+            radius: 8; color: mocha.surface0
+            ColumnLayout {
+                id: ctSection
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.top: parent.top; anchors.margins: 12; spacing: 8
+                Text {
+                    text: "󰡨  Containers"
+                    font.pixelSize: 12; font.bold: true; color: mocha.subtext0
+                }
+                Repeater {
+                    model: dashboard.containerList
+                    delegate: Rectangle {
+                        Layout.fillWidth: true; height: 40; radius: 6
+                        color: mocha.base
+                        RowLayout {
+                            anchors.fill: parent; anchors.margins: 8; spacing: 8
+                            Rectangle { width: 8; height: 8; radius: 4
+                                color: modelData.status === "running" ? mocha.green : mocha.overlay0 }
+                            Text { text: modelData.name; font.pixelSize: 11; font.bold: true; color: mocha.text }
+                            Text { text: modelData.image + (modelData.ports ? "  ·  " + modelData.ports : "")
+                                font.pixelSize: 9; color: mocha.overlay0 }
+                            Item { Layout.fillWidth: true }
+                            Rectangle {
+                                height: 24; radius: 4; implicitWidth: ctBtnText.implicitWidth + 16
+                                color: modelData.status === "running" ? mocha.red : mocha.green
+                                opacity: 0.2
+                                Text { id: ctBtnText; anchors.centerIn: parent
+                                    text: modelData.status === "running" ? "Stop" : "Start"
+                                    font.pixelSize: 9; color: modelData.status === "running" ? mocha.red : mocha.green }
+                                MouseArea { anchors.fill: parent
+                                    onClicked: {
+                                        dashAction.command = [dashPoll.dashCtlPath, "container",
+                                            modelData.status === "running" ? "stop" : "start", modelData.name]
+                                        dashAction.running = false; dashAction.running = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Text { text: "No containers running"; font.pixelSize: 10; color: mocha.overlay0
+                    visible: dashboard.containerList.length === 0 }
+            }
+        }
+    }
+}
+
+Flickable {
+    anchors.fill: parent; anchors.margins: 8
+    contentWidth: agentsCol.width; contentHeight: agentsCol.height
+    clip: true; visible: dashboard.activeTab === 1
+
+    ColumnLayout {
+        id: agentsCol; width: parent.width; spacing: 12
+
+        // --- OpenCode Card ---
+        Rectangle {
+            Layout.fillWidth: true; implicitHeight: ocCard.implicitHeight + 16
+            radius: 8; color: mocha.surface0
+            ColumnLayout {
+                id: ocCard
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.top: parent.top; anchors.margins: 12; spacing: 6
+
+                RowLayout {
+                    Layout.fillWidth: true; spacing: 8
+                    Rectangle { width: 8; height: 8; radius: 4
+                        color: dashboard.actCount("opencode") > 0 ? mocha.green : mocha.overlay0 }
+                    Text { text: "󰨞 OpenCode"; font.pixelSize: 12; font.bold: true; color: mocha.text }
+                    Item { Layout.fillWidth: true }
                     Rectangle {
-                        Layout.fillWidth: true; radius: 10
-                        implicitHeight: c2Col.implicitHeight + 24
-                        color: mocha.surface1
-                        ColumnLayout {
-                            id: c2Col
-                            anchors.left: parent.left; anchors.right: parent.right
-                            anchors.top: parent.top; anchors.margins: 12
-                            spacing: 8
-                            Text {
-                                text: "󱙝  C2 Frameworks"
-                                font.family: "JetBrains Mono"; font.pixelSize: 12; font.bold: true
-                                color: mocha.subtext0
+                        height: 26; radius: 4; implicitWidth: 60; color: mocha.mauve; opacity: 0.2
+                        Text { anchors.centerIn: parent; text: "New"; font.pixelSize: 9; color: mocha.mauve }
+                        MouseArea { anchors.fill: parent
+                            onClicked: {
+                                Quickshell.execDetached("ghostty", ["-e", "opencode"])
+                                    || Quickshell.execDetached("kitty", ["opencode"])
+                                    || Quickshell.execDetached("alacritty", ["-e", "opencode"])
+                                    || Quickshell.execDetached("xterm", ["-e", "opencode"])
+                            }
+                        }
+                    }
+                    Rectangle {
+                        height: 26; radius: 4; implicitWidth: 70; color: mocha.teal; opacity: 0.15
+                        Text { anchors.centerIn: parent; text: "Resume"; font.pixelSize: 9; color: mocha.teal }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: dashboard.ocResumePopup.visible = true
+                        }
+                    }
+                }
+                Text { text: "⚡ " + (dashboard.agentSess("opencode").length > 0 ? (dashboard.agentSess("opencode")[0].machine || "local") : "local") + "  ·  📁 " + (dashboard.agentSess("opencode").length > 0 ? (dashboard.agentSess("opencode")[0].workdir || "—") : "—")
+                    font.pixelSize: 9; color: mocha.overlay0 }
+
+                ListView {
+                    Layout.fillWidth: true
+                    height: dashboard.expandedAgent === 0 ? Math.min(dashboard.agentSess("opencode").length * 36, 160) : 0
+                    visible: dashboard.expandedAgent === 0
+                    clip: true; spacing: 3
+                    model: {
+                        var r = []
+                        for (var i = 0; i < dashboard.agentSessions.length; i++) {
+                            if (dashboard.agentSessions[i].agent === "opencode") r.push(dashboard.agentSessions[i])
+                        }
+                        return r
+                    }
+                    delegate: Rectangle {
+                        width: parent ? parent.width : 0
+                        height: 34; radius: 6
+                        color: mocha.base
+                        clip: true
+                        RowLayout {
+                            anchors.fill: parent; anchors.margins: 6; spacing: 6
+                            Rectangle {
+                                width: 6; height: 6; radius: 3
+                                color: modelData.status === "active" ? mocha.green : mocha.overlay0
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: 0
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.id.replace("stats-pid-","").replace("session_","").substring(0, 12)
+                                    font.pixelSize: 10; font.bold: true; color: mocha.text
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.model + "  ·  " + modelData.total_calls + "c  ·  " +
+                                          Math.round(modelData.uptime_seconds/60) + "m"
+                                    font.pixelSize: 8; color: mocha.overlay0
+                                    elide: Text.ElideRight
+                                }
                             }
                             Text {
                                 text: {
-                                    try { var c = JSON.parse(dashboard.c2Status); return c.length > 0 ? c.map(function(x) { return x.name + ": " + x.status; }).join("  ·  ") : "None active"; }
-                                    catch(e) { return "None configured"; }
+                                    if (modelData.cost_saved > 0.01) return "$" + modelData.cost_saved.toFixed(2)
+                                    if (modelData.tokens_saved > 0) return (modelData.tokens_saved/1000).toFixed(1) + "k tok"
+                                    return ""
                                 }
-                                font.pixelSize: 11; color: mocha.text
+                                font.pixelSize: 9; color: mocha.teal
+                                visible: modelData.tokens_saved > 0 || modelData.cost_saved > 0.01
                             }
                         }
                     }
+                }
+            }
+            MouseArea { anchors.fill: parent
+                onClicked: dashboard.expandedAgent = (dashboard.expandedAgent === 0 ? -1 : 0) }
+        }
 
-                    // --- Agent Sessions ---
+        // --- Hermes Card ---
+        Rectangle {
+            Layout.fillWidth: true; implicitHeight: hermesCard.implicitHeight + 16
+            radius: 8; color: mocha.surface0
+            ColumnLayout {
+                id: hermesCard
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.top: parent.top; anchors.margins: 12; spacing: 6
+
+                RowLayout {
+                    Layout.fillWidth: true; spacing: 8
+                    Rectangle { width: 8; height: 8; radius: 4
+                        color: dashboard.actCount("hermes") > 0 ? mocha.green : mocha.overlay0 }
+                    Text { text: "󰣇 Hermes"; font.pixelSize: 12; font.bold: true; color: mocha.text }
+                    Item { Layout.fillWidth: true }
                     Rectangle {
-                        Layout.fillWidth: true
-                        radius: 10
-                        color: mocha.surface1
-                        implicitHeight: sessionsCol.implicitHeight + 24
-
-                        ColumnLayout {
-                            id: sessionsCol
-                            anchors.left: parent.left; anchors.right: parent.right
-                            anchors.top: parent.top; anchors.margins: 12
-                            spacing: 8
-
-                            Text {
-                                text: "󱚝  Agent Sessions  (click card to expand)"
-                                font.family: "JetBrains Mono"; font.pixelSize: 11; font.bold: true
-                                color: mocha.subtext0
+                        height: 26; radius: 4; implicitWidth: 60; color: mocha.mauve; opacity: 0.2
+                        Text { anchors.centerIn: parent; text: "New"; font.pixelSize: 9; color: mocha.mauve }
+                        MouseArea { anchors.fill: parent
+                            onClicked: {
+                                Quickshell.execDetached("ghostty", ["-e", "hermes"])
+                                    || Quickshell.execDetached("kitty", ["hermes"])
+                                    || Quickshell.execDetached("alacritty", ["-e", "hermes"])
+                                    || Quickshell.execDetached("xterm", ["-e", "hermes"])
                             }
+                        }
+                    }
+                }
+                Text { text: "⚡ " + (dashboard.agentSess("hermes").length > 0 ? (dashboard.agentSess("hermes")[0].machine || "local") : "local") + "  ·  📁 " + (dashboard.agentSess("hermes").length > 0 ? (dashboard.agentSess("hermes")[0].workdir || "—") : "—")
+                    font.pixelSize: 9; color: mocha.overlay0 }
 
-                            RowLayout {
-                                Layout.fillWidth: true; spacing: 8
-                                Repeater {
-                                    model: ["opencode", "hermes"]
-                                    Rectangle {
-                                        Layout.fillWidth: true
-                                        implicitHeight: agentCardBody.implicitHeight + 14
-                                        radius: 8
-                                        color: mocha.surface0
+                ListView {
+                    Layout.fillWidth: true
+                    height: dashboard.expandedAgent === 1 ? Math.min(dashboard.agentSess("hermes").length * 36, 160) : 0
+                    visible: dashboard.expandedAgent === 1
+                    clip: true; spacing: 3
+                    model: {
+                        var r = []
+                        for (var i = 0; i < dashboard.agentSessions.length; i++) {
+                            if (dashboard.agentSessions[i].agent === "hermes") r.push(dashboard.agentSessions[i])
+                        }
+                        return r
+                    }
+                    delegate: Rectangle {
+                        width: parent ? parent.width : 0
+                        height: 34; radius: 6
+                        color: mocha.base
+                        clip: true
+                        RowLayout {
+                            anchors.fill: parent; anchors.margins: 6; spacing: 6
+                            Rectangle {
+                                width: 6; height: 6; radius: 3
+                                color: modelData.status === "active" ? mocha.green : mocha.overlay0
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: 0
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.id.replace("stats-pid-","").replace("session_","").substring(0, 12)
+                                    font.pixelSize: 10; font.bold: true; color: mocha.text
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.model + "  ·  " + modelData.total_calls + "c  ·  " +
+                                          Math.round(modelData.uptime_seconds/60) + "m"
+                                    font.pixelSize: 8; color: mocha.overlay0
+                                    elide: Text.ElideRight
+                                }
+                            }
+                            Text {
+                                text: {
+                                    if (modelData.cost_saved > 0.01) return "$" + modelData.cost_saved.toFixed(2)
+                                    if (modelData.tokens_saved > 0) return (modelData.tokens_saved/1000).toFixed(1) + "k tok"
+                                    return ""
+                                }
+                                font.pixelSize: 9; color: mocha.teal
+                                visible: modelData.tokens_saved > 0 || modelData.cost_saved > 0.01
+                            }
+                        }
+                    }
+                }
+            }
+            MouseArea { anchors.fill: parent
+                onClicked: dashboard.expandedAgent = (dashboard.expandedAgent === 1 ? -1 : 1) }
+        }
 
-                                        ColumnLayout {
-                                            id: agentCardBody
-                                            anchors.left: parent.left; anchors.right: parent.right
-                                            anchors.top: parent.top; anchors.margins: 10
-                                            spacing: 4
-
-                                            RowLayout {
-                                                Layout.fillWidth: true; spacing: 8
-                                                Rectangle {
-                                                    width: 8; height: 8; radius: 4
-                                                    color: dashboard.actCount(modelData) > 0 ? mocha.green : mocha.overlay0
-                                                }
-                                                Text {
-                                                    text: modelData === "opencode" ? "󰨞 OpenCode" : "󰣇 Hermes"
-                                                    font.family: "JetBrains Mono"; font.pixelSize: 11; font.bold: true
-                                                    color: mocha.text
-                                                }
-                                                Item { Layout.fillWidth: true }
-                                                Text {
-                                                    text: dashboard.sessCount(modelData) + " sessions"
-                                                    font.pixelSize: 10; color: mocha.overlay0
-                                                }
-                                                Text {
-                                                    text: dashboard.expandedAgent === index ? "▲" : "▼"
-                                                    font.pixelSize: 10; color: mocha.overlay0
-                                                }
-                                                MouseArea {
-                                                    id: cardMouse
-                                                    anchors.fill: parent
-                                                    onClicked: {
-                                                        dashboard.expandedAgent = (dashboard.expandedAgent === index ? -1 : index)
-                                                    }
-                                                }
-                                            }
-                                            RowLayout {
-                                                Layout.fillWidth: true; spacing: 12; visible: true
-                                                Text {
-                                                    text: {
-                                                        var sl = dashboard.agentSess(modelData);
-                                                        return "⚡ " + (sl.length > 0 ? (sl[0].machine || "local") : "local");
-                                                    }
-                                                    font.pixelSize: 9; color: mocha.overlay0
-                                                }
-                                                Text {
-                                                    Layout.fillWidth: true
-                                                    text: {
-                                                        var sl = dashboard.agentSess(modelData);
-                                                        return "📁 " + (sl.length > 0 ? (sl[0].workdir || "—") : "—");
-                                                    }
-                                                    font.pixelSize: 9; color: mocha.overlay0
-                                                    elide: Text.ElideRight
-                                                }
-                                            }
-
-                                            ListView {
-                                                Layout.fillWidth: true
-                                                height: dashboard.expandedAgent === index
-                                                    ? Math.min(dashboard.agentSess(modelData).length * 36, 160)
-                                                    : 0
-                                                visible: dashboard.expandedAgent === index
-                                                clip: true; spacing: 3
-                                                model: {
-                                                    var r = []
-                                                    for (var i = 0; i < dashboard.agentSessions.length; i++) {
-                                                        if (dashboard.agentSessions[i].agent === modelData) r.push(dashboard.agentSessions[i])
-                                                    }
-                                                    return r
-                                                }
-                                                delegate: Rectangle {
-                                                    width: parent ? parent.width : 0
-                                                    height: 34; radius: 6
-                                                    color: mocha.base
-                                                    clip: true
-                                                    RowLayout {
-                                                        anchors.fill: parent; anchors.margins: 6; spacing: 6
-                                                        Rectangle {
-                                                            width: 6; height: 6; radius: 3
-                                                            color: modelData.status === "active" ? mocha.green : mocha.overlay0
-                                                        }
-                                                        ColumnLayout {
-                                                            Layout.fillWidth: true; spacing: 0
-                                                            Text {
-                                                                Layout.fillWidth: true
-                                                                text: modelData.id.replace("stats-pid-","").replace("session_","").substring(0, 12)
-                                                                font.pixelSize: 10; font.bold: true; color: mocha.text
-                                                                elide: Text.ElideRight
-                                                            }
-                                                            Text {
-                                                                Layout.fillWidth: true
-                                                                text: modelData.model + "  ·  " + modelData.total_calls + "c  ·  " +
-                                                                      Math.round(modelData.uptime_seconds/60) + "m"
-                                                                font.pixelSize: 8; color: mocha.overlay0
-                                                                elide: Text.ElideRight
-                                                            }
-                                                        }
-                                                        Text {
-                                                            text: {
-                                                                if (modelData.cost_saved > 0.01) return "$" + modelData.cost_saved.toFixed(2)
-                                                                if (modelData.tokens_saved > 0) return (modelData.tokens_saved/1000).toFixed(1) + "k tok"
-                                                                return ""
-                                                            }
-                                                            font.pixelSize: 9; color: mocha.teal
-                                                            visible: modelData.tokens_saved > 0 || modelData.cost_saved > 0.01
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+        // --- Tmux Sessions ---
+        Rectangle {
+            Layout.fillWidth: true; implicitHeight: tmuxSection.implicitHeight + 20
+            radius: 8; color: mocha.surface0
+            ColumnLayout {
+                id: tmuxSection
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.top: parent.top; anchors.margins: 12; spacing: 6
+                Text { text: "  Tmux Sessions"; font.pixelSize: 12; font.bold: true; color: mocha.subtext0 }
+                Repeater {
+                    model: dashboard.tmuxList
+                    delegate: Rectangle {
+                        Layout.fillWidth: true; height: 36; radius: 6; color: mocha.base
+                        RowLayout {
+                            anchors.fill: parent; anchors.margins: 8; spacing: 8
+                            Rectangle { width: 8; height: 8; radius: 4
+                                color: modelData.attached ? mocha.green : mocha.overlay0 }
+                            Text { text: modelData.session; font.pixelSize: 11; font.bold: true; color: mocha.text }
+                            Text { text: modelData.windows + " windows"; font.pixelSize: 9; color: mocha.overlay0 }
+                            Item { Layout.fillWidth: true }
+                            Rectangle {
+                                height: 24; radius: 4; implicitWidth: 60; color: mocha.mauve; opacity: 0.15
+                                Text { anchors.centerIn: parent; text: "Attach"; font.pixelSize: 9; color: mocha.mauve }
+                                MouseArea { anchors.fill: parent
+                                    onClicked: {
+                                        Quickshell.execDetached("ghostty", ["-e", "tmux", "attach", "-t", modelData.session])
+                                            || Quickshell.execDetached("kitty", ["sh", "-c", "tmux attach -t " + modelData.session])
+                                            || Quickshell.execDetached("alacritty", ["-e", "tmux", "attach", "-t", modelData.session])
                                     }
                                 }
                             }
                         }
                     }
-                    // Operations Brief
-                    RowLayout {
-                        Layout.fillWidth: true; spacing: 16; Layout.bottomMargin: 4
-                        Text {
-                            text: "󰻠 CT: " + dashboard.opsContainerCount + "  ·  󰻉 VM: " + dashboard.opsVmCount + "  ·  󰔟 " + dashboard.opsUptime
-                            font.pixelSize: 11
-                            color: mocha.overlay0
+                }
+                Text { text: "No tmux sessions"; font.pixelSize: 10; color: mocha.overlay0
+                    visible: dashboard.tmuxList.length === 0 }
+            }
+        }
+    }
+}
+
+Flickable {
+    anchors.fill: parent; anchors.margins: 8
+    contentWidth: netCol.width; contentHeight: netCol.height
+    clip: true; visible: dashboard.activeTab === 2
+
+    ColumnLayout {
+        id: netCol; width: parent.width; spacing: 12
+
+        // WireGuard
+        Rectangle {
+            Layout.fillWidth: true; implicitHeight: wgSection.implicitHeight + 20
+            radius: 8; color: mocha.surface0
+            ColumnLayout {
+                id: wgSection
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.top: parent.top; anchors.margins: 12; spacing: 6
+                Text { text: "󰒘  WireGuard"; font.pixelSize: 12; font.bold: true; color: mocha.subtext0 }
+                Repeater {
+                    model: dashboard.networkState.wg || []
+                    delegate: Rectangle {
+                        Layout.fillWidth: true; height: 40; radius: 6; color: mocha.base
+                        RowLayout {
+                            anchors.fill: parent; anchors.margins: 8; spacing: 8
+                            Rectangle { width: 8; height: 8; radius: 4
+                                color: modelData.status === "up" ? mocha.green : mocha.overlay0 }
+                            Text { text: modelData.name; font.pixelSize: 11; font.bold: true; color: mocha.text }
+                            Text { text: modelData.ip || ""; font.pixelSize: 9; color: mocha.overlay0 }
+                            Item { Layout.fillWidth: true }
+                            Rectangle {
+                                height: 24; radius: 4; implicitWidth: btnTunnelText.implicitWidth + 16
+                                color: modelData.status === "up" ? mocha.red : mocha.green; opacity: 0.2
+                                Text { id: btnTunnelText; anchors.centerIn: parent
+                                    text: modelData.status === "up" ? "Down" : "Up"
+                                    font.pixelSize: 9; color: modelData.status === "up" ? mocha.red : mocha.green }
+                                MouseArea { anchors.fill: parent
+                                    onClicked: {
+                                        dashAction.command = [dashPoll.dashCtlPath, "network", "wg",
+                                            modelData.status === "up" ? "down" : "up", modelData.name]
+                                        dashAction.running = false; dashAction.running = true
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
+        }
 
-            // --- System Footer ---
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 32
-                radius: 10
-                color: Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.3)
+        // nftables
+        Rectangle {
+            Layout.fillWidth: true; height: 40; radius: 6; color: mocha.surface0
+            RowLayout {
+                anchors.fill: parent; anchors.margins: 8; spacing: 8
+                Text { text: "󰯱  Firewall (nftables)"; font.pixelSize: 11; font.bold: true; color: mocha.subtext0 }
+                Text { text: ((dashboard.networkState.nftables || {}).rules_count || 0) + " rules"
+                    font.pixelSize: 9; color: mocha.overlay0 }
+                Item { Layout.fillWidth: true }
+                Rectangle {
+                    height: 24; radius: 4; implicitWidth: nftBtnText.implicitWidth + 16
+                    color: (dashboard.networkState.nftables || {}).enabled ? mocha.red : mocha.green; opacity: 0.2
+                    Text { id: nftBtnText; anchors.centerIn: parent
+                        text: (dashboard.networkState.nftables || {}).enabled ? "Disable" : "Enable"
+                        font.pixelSize: 9; color: (dashboard.networkState.nftables || {}).enabled ? mocha.red : mocha.green }
+                    MouseArea { anchors.fill: parent
+                        onClicked: {
+                            dashAction.command = [dashPoll.dashCtlPath, "network", "nftables",
+                                (dashboard.networkState.nftables || {}).enabled ? "disable" : "enable"]
+                            dashAction.running = false; dashAction.running = true
+                        }
+                    }
+                }
+            }
+        }
 
-                RowLayout {
-                    anchors.fill: parent; anchors.margins: 10
-                    spacing: 16
-                    Text {
-                        text: "󰻠 CPU: " + cpuStr
-                        font.family: "JetBrains Mono"; font.pixelSize: 10
-                        color: mocha.subtext0
-                    }
-                    Text {
-                        text: " RAM: " + ramStr
-                        font.family: "JetBrains Mono"; font.pixelSize: 10
-                        color: mocha.subtext0
-                    }
-                    Item { Layout.fillWidth: true }
-                    Text {
-                        text: "󰔟 " + uptimeStr
-                        font.family: "JetBrains Mono"; font.pixelSize: 10
-                        color: mocha.overlay0
+        // Wifi + Ethernet + DNS
+        Rectangle {
+            Layout.fillWidth: true; implicitHeight: connSection.implicitHeight + 20
+            radius: 8; color: mocha.surface0
+            ColumnLayout {
+                id: connSection
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.top: parent.top; anchors.margins: 12; spacing: 4
+                Text { text: "󰖩  Connections"; font.pixelSize: 12; font.bold: true; color: mocha.subtext0 }
+                Text { text: "WiFi: " + ((dashboard.networkState.wifi || {}).ssid || "Disconnected")
+                    + (((dashboard.networkState.wifi || {}).connected) ? " (" + (dashboard.networkState.wifi || {}).strength + "%)" : "")
+                    font.pixelSize: 10; color: mocha.text }
+                Text { text: "Ethernet: " + ((dashboard.networkState.ethernet || {}).up ? ((dashboard.networkState.ethernet || {}).ip || "connected") : "Disconnected")
+                    font.pixelSize: 10; color: mocha.text }
+                Text { text: "DNS: " + ((dashboard.networkState || {}).dns || "system default")
+                    font.pixelSize: 10; color: mocha.overlay0 }
+            }
+        }
+
+        // WireGuard Peers
+        Rectangle {
+            Layout.fillWidth: true; implicitHeight: peersSection.implicitHeight + 20
+            radius: 8; color: mocha.surface0
+            ColumnLayout {
+                id: peersSection
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.top: parent.top; anchors.margins: 12; spacing: 4
+                Text { text: "󰤨  Peers"; font.pixelSize: 12; font.bold: true; color: mocha.subtext0 }
+                Repeater {
+                    model: { var peers = []; for (var i = 0; i < (dashboard.networkState.wg || []).length; i++) { for (var j = 0; j < (dashboard.networkState.wg[i].peers || []).length; j++) { peers.push(dashboard.networkState.wg[i].peers[j]) } } return peers; }
+                    delegate: Rectangle {
+                        Layout.fillWidth: true; height: 28; radius: 4; color: mocha.base
+                        RowLayout {
+                            anchors.fill: parent; anchors.margins: 6; spacing: 6
+                            Rectangle { width: 6; height: 6; radius: 3
+                                color: modelData.connected ? mocha.green : mocha.overlay0 }
+                            Text { text: modelData.name; font.pixelSize: 10; color: mocha.text }
+                            Item { Layout.fillWidth: true }
+                            Text { text: modelData.latest_handshake || ""; font.pixelSize: 8; color: mocha.overlay0 }
+                        }
                     }
                 }
             }
         }
     }
+}
+
+Flickable {
+    anchors.fill: parent; anchors.margins: 8
+    contentWidth: svcsCol.width; contentHeight: svcsCol.height
+    clip: true; visible: dashboard.activeTab === 3
+
+    ColumnLayout {
+        id: svcsCol; width: parent.width; spacing: 8
+
+        Text {
+            Layout.fillWidth: true
+            text: "󰅟  Service Management"
+            font.pixelSize: 12; font.bold: true; color: mocha.subtext0
+        }
+
+        Repeater {
+            model: dashboard.serviceList
+            delegate: Rectangle {
+                Layout.fillWidth: true; height: 40; radius: 6
+                color: mocha.surface0
+                RowLayout {
+                    anchors.fill: parent; anchors.margins: 8; spacing: 8
+                    Rectangle { width: 8; height: 8; radius: 4
+                        color: modelData.status === "active" ? mocha.green : mocha.red }
+                    Text { text: modelData.name; font.pixelSize: 11; font.bold: true; color: mocha.text }
+                    Text { text: "(" + modelData.type + ")"; font.pixelSize: 9; color: mocha.overlay0 }
+                    Item { Layout.fillWidth: true }
+                    Rectangle {
+                        height: 24; radius: 4; implicitWidth: svcBtnText.implicitWidth + 16
+                        color: modelData.status === "active" ? mocha.red : mocha.green; opacity: 0.2
+                        Text { id: svcBtnText; anchors.centerIn: parent
+                            text: modelData.status === "active" ? "Stop" : "Start"
+                            font.pixelSize: 9; color: modelData.status === "active" ? mocha.red : mocha.green }
+                        MouseArea { anchors.fill: parent
+                            onClicked: {
+                                dashAction.command = [dashPoll.dashCtlPath, "service",
+                                    modelData.status === "active" ? "stop" : "start",
+                                    modelData.name, modelData.type]
+                                dashAction.running = false; dashAction.running = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+Flickable {
+    anchors.fill: parent; anchors.margins: 8
+    contentWidth: c2Col.width; contentHeight: c2Col.height
+    clip: true; visible: dashboard.activeTab === 4
+
+    ColumnLayout {
+        id: c2Col; width: parent.width; spacing: 10
+
+        Text {
+            Layout.fillWidth: true
+            text: "󱙝  C2 Frameworks"
+            font.pixelSize: 12; font.bold: true; color: mocha.subtext0
+        }
+
+        Repeater {
+            model: dashboard.c2List
+            delegate: Rectangle {
+                Layout.fillWidth: true; implicitHeight: c2Card.implicitHeight + 20
+                radius: 8; color: mocha.surface0
+                ColumnLayout {
+                    id: c2Card
+                    anchors.left: parent.left; anchors.right: parent.right
+                    anchors.top: parent.top; anchors.margins: 12; spacing: 8
+                    RowLayout {
+                        Layout.fillWidth: true; spacing: 8
+                        Rectangle { width: 8; height: 8; radius: 4
+                            color: modelData.status === "running" ? mocha.green : mocha.overlay0 }
+                        Text { text: modelData.name; font.pixelSize: 12; font.bold: true; color: mocha.text }
+                        Text { text: modelData.status; font.pixelSize: 9; color: mocha.overlay0 }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true; spacing: 6
+                        Rectangle {
+                            height: 28; radius: 4; implicitWidth: 90; color: mocha.mauve; opacity: 0.15
+                            Text { anchors.centerIn: parent; text: "Open Web UI"; font.pixelSize: 9; color: mocha.mauve }
+                            MouseArea { anchors.fill: parent
+                                onClicked: Quickshell.execDetached("waterfox", [modelData.web_ui]) }
+                        }
+                        Rectangle {
+                            height: 28; radius: 4; implicitWidth: 60; color: mocha.teal; opacity: 0.15
+                            Text { anchors.centerIn: parent; text: "Launch"; font.pixelSize: 9; color: mocha.teal }
+                            MouseArea { anchors.fill: parent
+                                onClicked: {
+                                    dashAction.command = [dashPoll.dashCtlPath, "c2", "start", modelData.name]
+                                    dashAction.running = false; dashAction.running = true
+                                }
+                            }
+                        }
+                        Rectangle {
+                            height: 28; radius: 4; implicitWidth: 60; color: mocha.red; opacity: 0.15
+                            visible: modelData.status === "running"
+                            Text { anchors.centerIn: parent; text: "Stop"; font.pixelSize: 9; color: mocha.red }
+                            MouseArea { anchors.fill: parent
+                                onClicked: {
+                                    dashAction.command = [dashPoll.dashCtlPath, "c2", "stop", modelData.name]
+                                    dashAction.running = false; dashAction.running = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+            }
+        }
+    }
+
+    Popup {
+    id: ocResumePopup
+    width: 300; height: 200
+    x: parent.width / 2 - width / 2; y: parent.height / 2 - height / 2
+    visible: false
+
+    background: Rectangle {
+        radius: 12; color: mocha.surface1
+        border.width: 1; border.color: mocha.surface0
+    }
+
+    ColumnLayout {
+        anchors.fill: parent; anchors.margins: 12; spacing: 6
+        Text { text: "Resume OpenCode"; font.pixelSize: 12; font.bold: true; color: mocha.text }
+        Repeater {
+            model: {
+                var oc = []
+                for (var i = 0; i < dashboard.agentSessions.length; i++) {
+                    if (dashboard.agentSessions[i].agent === "opencode") oc.push(dashboard.agentSessions[i])
+                }
+                return oc.slice(0, 5)
+            }
+            delegate: Rectangle {
+                height: 32; radius: 6; color: mocha.surface0
+                Text { anchors.centerIn: parent
+                    text: modelData.id.replace("stats-pid-","").substring(0,10)
+                    font.pixelSize: 10; color: mocha.text }
+                MouseArea { anchors.fill: parent
+                    onClicked: {
+                        var sid = modelData.started_at ? ("@" + modelData.started_at.substring(0,10)) : modelData.id
+                        Quickshell.execDetached("ghostty", ["-e", "opencode", "--resume", sid])
+                            || Quickshell.execDetached("kitty", ["sh", "-c", "opencode --resume " + sid])
+                            || Quickshell.execDetached("alacritty", ["-e", "opencode", "--resume", sid])
+                        ocResumePopup.visible = false
+                    }
+                }
+            }
+        }
+        Rectangle {
+            Layout.fillWidth: true; height: 1; color: mocha.surface0
+        }
+        Rectangle {
+            height: 28; radius: 4; implicitWidth: 80; color: mocha.overlay0; opacity: 0.2
+            Text { anchors.centerIn: parent; text: "Cancel"; font.pixelSize: 10; color: mocha.text }
+            MouseArea { anchors.fill: parent; onClicked: ocResumePopup.visible = false }
+        }
+    }
+}
 }
