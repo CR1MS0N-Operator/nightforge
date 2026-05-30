@@ -1,0 +1,541 @@
+# === Ghostty Configuration - NightForge ===
+# Matugen-themed (auto-synced via matugen-sync.sh)
+# Font: JetBrainsMono Nerd Font Mono
+
+# === Font ===
+font-size = 12
+font-family = "JetBrainsMono Nerd Font Mono"
+
+# === Window ===
+window-decoration = true
+window-padding-x = 12
+window-padding-y = 12
+background-opacity = 0.95
+background-blur-radius = 20
+window-height = 70
+window-width = 160
+
+# === Cursor ===
+cursor-style = block
+cursor-style-blink = false
+
+# === Scrollback (tmux handles real scrollback) ===
+scrollback-limit = 10000
+
+# === Behavior ===
+mouse-hide-while-typing = true
+copy-on-select = false
+confirm-close-surface = false
+gtk-single-instance = true
+
+# === Notifications ===
+app-notifications = no-clipboard-copy,no-config-reload
+
+# === Shell integration ===
+shell-integration = detect
+shell-integration-features = cursor,sudo,title,no-cursor
+
+# === Keybinds ===
+keybind = ctrl+shift+n=new_window
+keybind = ctrl+t=new_tab
+keybind = ctrl+plus=increase_font_size:1
+keybind = ctrl+minus=decrease_font_size:1
+keybind = ctrl+zero=reset_font_size
+keybind = shift+enter=text:\n
+
+# === Splits (use sparingly — tmux handles panes) ===
+unfocused-split-opacity = 0.7
+unfocused-split-fill = #0D0F1A
+
+# === Tab bar ===
+gtk-titlebar = false
+
+# === Theme (Matugen auto-generated) ===
+# Colors are synced by ~/.local/bin/matugen-sync.sh
+# Manual override (commented out by default):
+# theme = dankcolors
+
+# === Keybind Hierarchy ===
+# Ghostty: Cmd+ (window/app level)
+# Tmux: C-Space (prefix)
+# Niri: Mod/Super (WM level)
+# No conflicts — Ghostty keybinds use Cmd, Tmux uses C-Space, Niri uses Mod
+
+# Window management
+keybind = super+n=new_window
+keybind = super+shift+n=new_split
+
+# Font size (overrides earlier ctrl+ binds)
+keybind = super+plus=increase_font_size:1
+keybind = super+minus=decrease_font_size:1
+keybind = super+zero=reset_font_size
+
+# === Performance (Nvidia Wayland) ===
+adjust-underline-position = 1
+adjust-overline-position = 1
+font-thicken = true
+freetype-load-flags = slight-hinting
+adjust-cell-width = -1
+adjust-cell-height = 0
+
+# === MATUGEN COLORS (auto-injected by matugen-sync.sh) ===
+# background = <surface>
+# foreground = <onSurface>
+# cursor-color = <primary>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# === Matugen Colors BEGIN ===
+# === Matugen Colors (auto-generated) ===
+background = #131318
+foreground = #e4e1e9
+cursor-color = #bdc2ff
+cursor-text = #252b61
+selection-background = #c4c5dd
+selection-foreground = #2d2f42
+
+# === Terminal Colors ===
+# black
+palette = 0=#131318
+palette = 8=#46464f
+
+# red
+palette = 1=#ffb4ab
+palette = 9=#ffb4ab
+
+# green
+palette = 2=#bdc2ff
+palette = 10=#bdc2ff
+
+# yellow
+palette = 3=#e7b9d6
+palette = 11=#e7b9d6
+
+# blue
+palette = 4=#c4c5dd
+palette = 12=#c4c5dd
+
+# magenta
+palette = 5=#dfe0ff
+palette = 13=#dfe0ff
+
+# cyan
+palette = 6=#ffd7ef
+palette = 14=#ffd7ef
+
+# white
+palette = 7=#e4e1e9
+palette = 15=#e4e1e9
+# === Matugen Colors END ===

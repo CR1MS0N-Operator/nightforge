@@ -1,0 +1,23 @@
+{
+    "llm": {
+        "provider": "ollama",
+        "config": {
+            "model": "qwen2.5-coder:3b",
+            "temperature": 0.1,
+            "max_tokens": 2000
+        }
+    },
+    "embedder": {
+        "provider": "ollama",
+        "config": {
+            "model": "nomic-embed-text"
+        }
+    },
+    "vector_store": {
+        "provider": "qdrant",
+        "config": {
+            "path": "/home/ForeverLX/.local/share/mem0/qdrant"
+        }
+    },
+    "version": "v1.1"
+}

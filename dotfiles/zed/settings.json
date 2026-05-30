@@ -1,0 +1,112 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "auto_install_extensions": {
+    "markdown-oxide": true
+  },
+  "cli_default_open_behavior": "existing_window",
+  "disable_ai": false,
+  "base_keymap": "None",
+  "cursor_shape": "hollow",
+  "buffer_font_family": ".ZedMono",
+  "auto_update": false,
+  "redact_private_values": true,
+  "edit_predictions": {
+    "provider": "zed"
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false
+  },
+  "vim_mode": true,
+  "icon_theme": "Zed (Default)",
+  "ui_font_size": 16,
+  "buffer_font_size": 15,
+  "theme": {
+    "mode": "dark",
+    "light": "Ayu Light",
+    "dark": "Matugen NightForge"
+  },
+  "agent_servers": {
+    "hermes-agent": {
+      "type": "custom",
+      "command": "hermes",
+      "args": ["acp"],
+      "env": {}
+    },
+    "codex-acp": {
+      "type": "registry"
+    }
+  },
+  "context_servers": {
+    "gitnexus": {
+      "command": "gitnexus",
+      "args": ["mcp"]
+    },
+    "context-mode": {
+      "command": "context-mode",
+      "args": []
+    },
+    "horizon": {
+      "command": "horizon-mcp",
+      "args": []
+    },
+    "voicebox": {
+      "url": "http://127.0.0.1:17493/mcp",
+      "headers": {
+        "X-Voicebox-Client-Id": "nightforge-opencode"
+      }
+    },
+    "searxng": {
+      "command": "/home/ForeverLX/.config/mcp/searxng-mcp/mcp-server-searxng",
+      "args": [],
+      "env": {
+        "SEARXNG_URL": "https://search.lan"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/ForeverLX"
+      ]
+    },
+    "git": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-git",
+        "--repository",
+        "/home/ForeverLX/Github/nightforge"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--headless"
+      ]
+    },
+    "cve-mcp": {
+      "command": "uvx",
+      "args": ["cve-mcp-server"]
+    },
+    "markdown-vault": {
+      "command": "npx",
+      "args": ["-y", "@wirux/mcp-markdown-vault"],
+      "env": {
+        "VAULT_PATH": "/home/ForeverLX/Documents/azrael-vault"
+      }
+    },
+    "network": {
+      "command": "/home/ForeverLX/.config/mcp/network-mcp/mcp-server-network",
+      "args": []
+    }
+  }
+}
