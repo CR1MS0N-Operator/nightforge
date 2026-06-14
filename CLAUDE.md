@@ -1,35 +1,3 @@
-# nightforge — Agent Rules
-
-## Purpose
-Operator workstation for Azrael Security operations. Hosts T5 code tooling (OpenCode) and local development environment.
-
-## Session Strategy
-- `--fork` — branch session for exploratory work
-- `--continue` — resume prior session
-- Use handoff docs between sessions for context transfer
-
-## GSD Workflow
-- `.planning/` directory for task breakdowns
-- STATE.md tracks progress
-- Execute in order: lint -> typecheck -> test -> build
-
-## Model Routing ($20/mo)
-| Task / Agent | Model | Provider | Cost |
-|---|---|---|---|
-| Quick tasks | glm-5.1 | OpenCode Go | $0 (sub) |
-| Council/Oracle/Designer | kimi-k2.6 | OpenCode Go | $0 (sub) |
-| Councillor/Fixer | deepseek-v4-flash | OpenRouter | ~$0.28/M out |
-| General | glm-5.1 | OpenCode Go | $0 (sub) |
-| Explore | mistral-nemo | OpenRouter | ~$0.03/M out |
-| Explorer/Librarian | nemotron-3-nano | NVIDIA NIM (free) | $0 |
-| Architecture | kimi-k2.6 | OpenCode Go | $0 (sub) |
-
-**Pattern:** Free tier first → OpenCode Go sub → OpenRouter fallback → NVIDIA NIM (free)
-
-## Reference
-- Global rules: ~/.config/opencode/AGENTS.md
-- Azrael context: ~/Documents/azrael-ops/CLAUDE.md
-
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 

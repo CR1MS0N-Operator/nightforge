@@ -185,6 +185,30 @@ cat > "$CHEATSHEET" << HTML
         <tr><td><span class="k">MicMute</span></td><td>Toggle mic mute</td></tr>
     </table>
 
+    <h2>Neovim</h2>
+    <table>
+        <tr><th>Keybind</th><th>Action</th></tr>
+        <tr><td><span class="k">C-w h/j/k/l</span></td><td>Navigate windows</td></tr>
+        <tr><td><span class="k">Space</span></td><td>Leader key (which-key)</td></tr>
+        <tr><td><span class="k">Space+e</span></td><td>File explorer (neo-tree)</td></tr>
+        <tr><td><span class="k">Space+f</span></td><td>Live grep (telescope)</td></tr>
+        <tr><td><span class="k">gd / gr</span></td><td>Go to definition / references</td></tr>
+        <tr><td><span class="k">K</span></td><td>Hover documentation</td></tr>
+        <tr><td><span class="k">Space+r</span></td><td>Rename symbol</td></tr>
+        <tr><td><span class="k">Space+c a</span></td><td>Code action (LSP)</td></tr>
+        <tr><td><span class="k">Space+t</span></td><td>Toggle terminal</td></tr>
+        <tr><td><span class="k">Space+s</span></td><td>Session manager</td></tr>
+    </table>
+
+    <h2>AI Agents</h2>
+    <table>
+        <tr><th>Keybind</th><th>Action</th></tr>
+        <tr><td><span class="k">Mod+H</span></td><td>Hermes CLI</td></tr>
+        <tr><td><span class="k">Mod+Shift+H</span></td><td>Hermes Desktop</td></tr>
+        <tr><td><span class="k">Mod+P</span></td><td>Pi Agent (pia)</td></tr>
+        <tr><td><span class="k">Mod+Alt+P</span></td><td>Pi Agent via 9Router</td></tr>
+    </table>
+
     <h2>Aliases — Network &amp; Security</h2>
     <table>
         <tr><th>Alias</th><th>Expands to</th></tr>
