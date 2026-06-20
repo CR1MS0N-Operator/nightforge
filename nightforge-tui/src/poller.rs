@@ -91,10 +91,11 @@ pub struct DashboardData {
     pub tmux: Vec<TmuxSession>,
 }
 
-pub fn poll_dashboard() -> Result<DashboardData, String> {
-    let output = std::process::Command::new("/home/ForeverLX/Github/nightforge/dashboard-ctl/dashboard-ctl")
+pub async fn poll_dashboard() -> Result<DashboardData, String> {
+    let output = tokio::process::Command::new("/home/ForeverLX/Github/nightforge/dashboard-ctl/dashboard-ctl")
         .arg("poll")
         .output()
+        .await
         .map_err(|e| format!("Failed to execute dashboard-ctl: {}", e))?;
 
     if !output.status.success() {
@@ -144,8 +145,8 @@ pub struct EuphratesData {
     pub feeds: Vec<serde_json::Value>,
 }
 
-pub fn poll_euphrates() -> Result<EuphratesData, String> {
-    let client = reqwest::blocking::Client::builder()
+pub async fn poll_euphrates() -> Result<EuphratesData, String> {
+    let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()
         .map_err(|e| format!("euphrates client: {}", e))?;
@@ -153,15 +154,19 @@ pub fn poll_euphrates() -> Result<EuphratesData, String> {
     let cves: Vec<CveItem> = client
         .get("http://localhost:8480/api/cves")
         .send()
+        .await
         .map_err(|e| format!("euphrates cves: {}", e))?
         .json()
+        .await
         .map_err(|e| format!("euphrates cves json: {}", e))?;
 
     let feeds: Vec<serde_json::Value> = client
         .get("http://localhost:8480/api/feeds")
         .send()
+        .await
         .map_err(|e| format!("euphrates feeds: {}", e))?
         .json()
+        .await
         .map_err(|e| format!("euphrates feeds json: {}", e))?;
 
     Ok(EuphratesData { cves, feeds })
