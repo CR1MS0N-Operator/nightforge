@@ -4,11 +4,44 @@ use std::collections::HashMap;
 use std::path::Path;
 use walkdir::WalkDir;
 
+fn dirs_home() -> String {
+    std::env::var("HOME").unwrap_or_else(|_| "/root".to_string())
+}
+
 fn sessions_dir() -> String {
-    format!(
-        "{}/.hermes/sessions",
-        std::env::var("HOME").unwrap_or_else(|_| "/root".into())
-    )
+    format!("{}/.hermes/sessions", dirs_home())
+}
+
+fn config_path() -> String {
+    format!("{}/.hermes/config.yaml", dirs_home())
+}
+
+fn read_model_from_config() -> Result<String, std::io::Error> {
+    let content = std::fs::read_to_string(config_path())?;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if let Some(model) = trimmed.strip_prefix("default:") {
+            let model = model.trim();
+            if !model.is_empty() {
+                return Ok(model.to_string());
+            }
+        }
+    }
+    Ok("unknown".to_string())
+}
+
+fn read_project_from_config() -> Result<String, std::io::Error> {
+    let content = std::fs::read_to_string(config_path())?;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if let Some(project) = trimmed.strip_prefix("project:") {
+            let project = project.trim();
+            if !project.is_empty() {
+                return Ok(project.to_string());
+            }
+        }
+    }
+    Ok("~/.hermes/hermes-agent".to_string())
 }
 
 fn parse_timestamp_from_filename(fname: &str) -> Option<chrono::NaiveDateTime> {
@@ -32,44 +65,6 @@ fn parse_timestamp_from_filename(fname: &str) -> Option<chrono::NaiveDateTime> {
         .and_then(|d| d.and_hms_opt(hour, minute, second))
 }
 
-fn read_model_from_config() -> String {
-    let config_path = format!(
-        "{}/.hermes/config.yaml",
-        std::env::var("HOME").unwrap_or_else(|_| "/root".into())
-    );
-    let content = match std::fs::read_to_string(&config_path) {
-        Ok(c) => c,
-        Err(_) => return "unknown".to_string(),
-    };
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("default:") {
-            let model = trimmed.trim_start_matches("default:").trim();
-            if !model.is_empty() {
-                return model.to_string();
-            }
-        }
-    }
-    "unknown".to_string()
-}
-
-fn read_project_from_config() -> String {
-    let config_path = format!(
-        "{}/.hermes/config.yaml",
-        std::env::var("HOME").unwrap_or_default()
-    );
-    let content = match std::fs::read_to_string(&config_path) {
-        Ok(c) => c,
-        Err(_) => return "~/.hermes/hermes-agent".to_string(),
-    };
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if let Some(project) = trimmed.strip_prefix("project:") {
-            return project.trim().to_string();
-        }
-    }
-    "~/.hermes/hermes-agent".to_string()
-}
 
 pub fn read_sessions(machine: &str) -> Vec<Session> {
     let dir = sessions_dir();
@@ -77,8 +72,8 @@ pub fn read_sessions(machine: &str) -> Vec<Session> {
         return Vec::new();
     }
 
-    let model = read_model_from_config();
-    let project = read_project_from_config();
+    let model = read_model_from_config().unwrap_or_else(|_| "unknown".to_string());
+    let project = read_project_from_config().unwrap_or_else(|_| "~/.hermes/hermes-agent".to_string());
 
     let mut entries: Vec<(String, NaiveDateTime, std::path::PathBuf)> = Vec::new();
 
@@ -98,7 +93,7 @@ pub fn read_sessions(machine: &str) -> Vec<Session> {
         entries.push((id, ts, entry.path().to_path_buf()));
     }
 
-    entries.sort_by(|a, b| b.1.cmp(&a.1));
+    entries.sort_by_key(|e| std::cmp::Reverse(e.1));
     let most_recent_path = entries.first().map(|e| e.2.clone());
 
     let mut sessions = Vec::new();

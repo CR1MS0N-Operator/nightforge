@@ -46,9 +46,10 @@ fn is_recently_active(path: &Path, threshold_secs: u64) -> bool {
 
 fn resolve_workdir_from_pid(pid_str: &str) -> String {
     let cwd_path = format!("/proc/{}/cwd", pid_str);
-    std::fs::read_link(&cwd_path)
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_default()
+    match std::fs::read_link(&cwd_path) {
+        Ok(p) => p.to_string_lossy().to_string(),
+        Err(_) => String::new(),
+    }
 }
 
 pub fn read_sessions(machine: &str) -> Vec<Session> {
