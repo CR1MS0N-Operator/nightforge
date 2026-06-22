@@ -337,7 +337,7 @@ Niri uses different paradigms:
 ## Contributing
 
 Found a bug or have an enhancement? Open an issue:  
-https://github.com/ForeverLX/offsec-workstation/issues
+https://github.com/CR1MS0N-Operator/nightforge/issues
 
 ---
 

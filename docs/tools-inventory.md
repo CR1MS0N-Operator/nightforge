@@ -119,7 +119,7 @@ Last audited: 2026-03-29 (S040)
 | maxhu08-dotfiles | Stow-managed dotfiles reference (tmux, zsh, nvim configs) | Reference | Compare before removing |
 | maxhu08-wallpapers | Anime wallpaper collection | Keep | |
 | Mythic | Mythic C2 framework upstream source | Reference | v3.4.0.45, tracking upstream master — reference for Tairn deployment updates |
-| obsidian-skills | kepano/obsidian-skills agent skills for vault work | Active | Source clone, installed at azrael-vault/.claude/skills/ |
+| obsidian-skills | kepano/obsidian-skills agent skills for vault work | Active | Source clone, installed at cr1ms0n-vault/.claude/skills/ |
 | recon-ng | Web-based OSINT reconnaissance framework | Active | Red team / threat intel E-shape depth |
 | Rubeus | C# Kerberos interaction and abuse toolset (harmj0y) | Active — CRTA | Kerberoasting, AS-REP roasting, ticket operations |
 | RustHound-CE | BloodHound Community Edition collector in Rust | Active — CRTA | AD enumeration, cross-platform |

@@ -1,6 +1,6 @@
 # /investigate — Systematic Root Cause Debugging
 
-Azrael Security debugging discipline. Scoped to: Veil infrastructure issues,
+CR1MS0N-Operator debugging discipline. Scoped to: Veil infrastructure issues,
 PoC script behavior, container boundary research anomalies, C2 agent issues on Tairn.
 
 **Iron Law: NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST.**

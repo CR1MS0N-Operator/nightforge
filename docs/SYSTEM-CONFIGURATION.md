@@ -2,7 +2,7 @@
 
 ## Overview
 
-Complete configuration documentation for ForeverLX's offensive security workstation.
+Complete configuration documentation for the CR1MS0N-Operator NightForge workstation.
 
 **Last Updated:** 2026-02-24  
 **System:** Arch Linux x86_64  

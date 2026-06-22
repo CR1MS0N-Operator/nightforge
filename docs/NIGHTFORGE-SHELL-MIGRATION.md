@@ -252,7 +252,7 @@ mpc status
 ## Post-Migration Steps
 1. **Deploy dotfiles**:
    ```bash
-   cd /home/ForeverLX/Github/nightforge
+   cd ~/Github/nightforge
    bash scripts/deploy.sh
    ```
 

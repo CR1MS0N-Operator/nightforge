@@ -237,7 +237,7 @@ cat > "$CHEATSHEET" << HTML
     </div>
     </div>
 
-    <footer>NightForge · Azrael Security · Niri + DMS</footer>
+    <footer>NightForge · CR1MS0N-Operator · Niri + DMS</footer>
 </body>
 </html>
 HTML

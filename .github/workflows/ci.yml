@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  go-build:
+    name: Go build (dashboard-ctl)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard-ctl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: dashboard-ctl/go.mod
+      - run: go build -o /dev/null .
+      - run: go vet .
+
+  cargo-build:
+    name: Cargo build + clippy (session-tracker)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: session-tracker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+      - run: cargo build
+      - run: cargo clippy -- -D warnings
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@master
+        with:
+          severity: style
+          ignore_paths: >
+            .git
+            target
+            node_modules
+            .claude
+            .opencode
+            .dmux
+            .codegraph
+            modules/nightowl
+            niri-modifications
+
+  bash-syntax:
+    name: Bash syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          find . -name '*.sh' \
+            -not -path '*/target/*' \
+            -not -path '*/.git/*' \
+            -not -path '*/node_modules/*' \
+            -not -path '*/.claude/*' \
+            -not -path '*/.opencode/*' \
+            -not -path '*/niri-modifications/*' \
+            -print0 | xargs -0 -n1 bash -n

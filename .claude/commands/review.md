@@ -1,6 +1,6 @@
 # /review — Pre-Commit Review Gate
 
-Azrael Security pre-commit review for the security-research repo.
+CR1MS0N-Operator pre-commit review for the security-research repo.
 Scoped to: research writeups, PoC scripts, methodology documentation, tool code.
 
 **Fix-first discipline:**
