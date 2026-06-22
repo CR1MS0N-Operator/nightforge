@@ -1,5 +1,31 @@
 # NightForge v2 — Changelog
 
+
+## 2026-06-21 — Deep Audit & P0 Fixes (S{next})
+
+### Code Quality
+- **Rebrand**: Replaced all "Azrael Security" → "CR1MS0N-Operator" and "ForeverLX" URLs → "CR1MS0N-Operator" across README, AGENTS.md, AGENTS.pi.md, go.mod, dotfiles, .claude hooks
+- **shellcheck**: Fixed SC2155 (declare+assign), SC2188 (redirect), SC2086 (quoting), SC2126 (grep -c), SC2162 (read -r), SC2046 (quoting) across 8 scripts
+- **Removed dead code**: mermaid.rs + mermaid-rs-renderer dep from session-tracker
+- **Docker→Podman**: Fixed container.go to use `podman` not `docker`; updated service.go monitored services
+- **Created docs/INSTALL.md**: Resolved broken link from README Quick Start
+- **Cleaned .gitignore**: Removed stale nightforge-tui/target/ entry
+
+### Go Hardening (dashboard-ctl)
+- Added `--json` flag for machine-readable output
+- Improved error handling: list functions return errors instead of empty slices
+- Made TLS InsecureSkipVerify conditional (enabled for localhost only)
+- Removed dead `init()` in tmux.go
+- Added HTTP timeout safety in c2.go
+- Container/service error propagation on command failure
+
+### Rust Hardening (session-tracker)
+- Added `--output` CLI flag and `SESSION_TRACKER_OUTPUT` env var
+- Replaced all `expect()`/`unwrap()` with proper error propagation
+- Fixed clippy warnings (`-D warnings` clean)
+
+### Repository
+- Set GitHub topics (arch-linux, niri, red-team, offensive-security, etc.)
 ## 2026-05-04 — Full Stack Rebuild
 
 ### Architecture Change
