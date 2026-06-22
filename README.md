@@ -1,12 +1,12 @@
 # NightForge
 
-**Azrael Security — Operator Workstation**
+**CR1MS0N-Operator — Operator Workstation**
 
-Built and operated by [ForeverLX](https://github.com/ForeverLX) | Azrael Security™
+Built and operated by [CR1MS0N-Operator](https://github.com/CR1MS0N-Operator) | CR1MS0N-Operator
 
-Part of the [Veil](https://github.com/ForeverLX/veil) infrastructure project.
+Part of the [Veil](https://github.com/CR1MS0N-Operator/veil) infrastructure project.
 
-> NightForge is the primary operator workstation for Azrael Security. It is a daily-use, production-grade offensive security environment built on Arch Linux with the Niri compositor. The emphasis is on reproducibility, operational awareness, OPSEC-safe workflows, and long-term maintainability — not disposable lab setups.
+> NightForge is the primary operator workstation for CR1MS0N-Operator. It is a daily-use, production-grade offensive security environment built on Arch Linux with the Niri compositor. The emphasis is on reproducibility, operational awareness, OPSEC-safe workflows, and long-term maintainability — not disposable lab setups.
 
 ---
 
@@ -14,7 +14,7 @@ Part of the [Veil](https://github.com/ForeverLX/veil) infrastructure project.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/ForeverLX/nightforge.git
+git clone https://github.com/CR1MS0N-Operator/nightforge.git
 cd nightforge
 
 # 2. Review what will be installed
@@ -728,6 +728,6 @@ All tooling is for authorized security research and engagement work only. Sensit
 
 ---
 
-**Author:** Darrius Grate (ForeverLX) | Azrael Security™
+**Author:** Darrius Grate | CR1MS0N-Operator
 **License:** MIT
 **Last Updated:** {date}

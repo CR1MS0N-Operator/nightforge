@@ -68,3 +68,18 @@ niri-modifications/scripts/dashboard-ctl
 /tmp/
 .dmux/
 .gitnexus
+
+# Build artifacts
+dashboard-ctl/dashboard-ctl
+
+# Generated/planning artifacts
+.codegraph/
+.planning/
+
+# Backup files
+dotfiles/niri/.config/niri/dms-backup/
+*.qml.old
+
+# Auto-generated node files (no project deps)
+package.json
+package-lock.json

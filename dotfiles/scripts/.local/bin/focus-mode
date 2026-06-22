@@ -1,5 +1,5 @@
 #!/bin/bash
-# focus-mode — Azrael Security operator focus session
+# focus-mode — CR1MS0N-Operator operator focus session
 # Usage: focus-mode [start|stop|status]
 # Pomodoro: 35min work / 10min break
 # Notifications via notify-send (DMS/Quickshell handles display)

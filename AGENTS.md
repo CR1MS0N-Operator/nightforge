@@ -1,7 +1,7 @@
 # nightforge — Agent Rules
 
 ## Purpose
-Operator workstation for Azrael Security operations. Hosts T5 code tooling (OpenCode) and local development environment.
+Operator workstation for CR1MS0N-Operator operations. Hosts T5 code tooling (OpenCode) and local development environment.
 
 ## Session Strategy
 - `--fork` — branch session for exploratory work
@@ -28,7 +28,7 @@ Operator workstation for Azrael Security operations. Hosts T5 code tooling (Open
 
 ## Reference
 - Global rules: ~/.config/opencode/AGENTS.md
-- Azrael context: ~/Documents/azrael-ops/CLAUDE.md
+- CR1MS0N context: ~/Documents/cr1ms0n-ops/CLAUDE.md
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

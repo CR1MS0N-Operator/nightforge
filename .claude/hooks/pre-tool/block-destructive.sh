@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Azrael Security -- Claude Code hook: block destructive filesystem commands
+# CR1MS0N-Operator -- Claude Code hook: block destructive filesystem commands
 # PreToolUse / Bash
 
 COMMAND=$(cat /dev/stdin | jq -r '.tool_input.command // empty' 2>/dev/null)

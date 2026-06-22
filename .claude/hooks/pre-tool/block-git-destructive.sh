@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Azrael Security -- Claude Code hook: block direct push to main/master, enforce review/ branch prefix
+# CR1MS0N-Operator -- Claude Code hook: block direct push to main/master, enforce review/ branch prefix
 # PreToolUse / Bash
 # Security model: hook enforces push destination only. Operator inspects content at merge.
 # No branch is unconditionally trusted -- --force is blocked regardless of destination.

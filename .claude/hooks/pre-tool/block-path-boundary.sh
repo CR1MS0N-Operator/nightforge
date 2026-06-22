@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Azrael Security -- Claude Code hook: block file writes outside project root
+# CR1MS0N-Operator -- Claude Code hook: block file writes outside project root
 # PreToolUse / Write | Edit | MultiEdit
 
 INPUT=$(cat /dev/stdin)

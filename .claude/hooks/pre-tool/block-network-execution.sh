@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Azrael Security -- Claude Code hook: block pipe-to-shell execution
+# CR1MS0N-Operator -- Claude Code hook: block pipe-to-shell execution
 # PreToolUse / Bash
 
 COMMAND=$(cat /dev/stdin | jq -r '.tool_input.command // empty' 2>/dev/null)
