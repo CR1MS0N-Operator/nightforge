@@ -55,7 +55,3 @@ func tmuxList() ([]TmuxSession, error) {
 	}
 	return sessions, nil
 }
-
-func init() {
-	_ = fmt.Sprintf
-}

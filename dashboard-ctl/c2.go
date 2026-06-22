@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os/exec"
 	"strings"
 	"time"
@@ -44,13 +45,30 @@ func c2Cmd(args []string) (interface{}, error) {
 	}
 }
 
+
+func c2HTTPClient(webUI string) (*http.Client, error) {
+	parsed, err := url.Parse(webUI)
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig := &tls.Config{}
+	switch parsed.Hostname() {
+	case "localhost", "127.0.0.1", "::1":
+		tlsConfig.InsecureSkipVerify = true
+	}
+	return &http.Client{
+		Timeout:   2 * time.Second,
+		Transport: &http.Transport{TLSClientConfig: tlsConfig},
+	}, nil
+}
 func c2List() ([]C2Framework, error) {
 	var result []C2Framework
 	for _, fw := range c2Frameworks {
 		status := "offline"
-		client := &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}}
+		client, err := c2HTTPClient(fw.WebUI)
+		if err != nil {
+			return nil, err
+		}
 		resp, err := client.Get(fw.WebUI)
 		if err == nil {
 			resp.Body.Close()

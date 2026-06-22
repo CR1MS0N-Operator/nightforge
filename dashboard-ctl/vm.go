@@ -40,7 +40,7 @@ func vmCmd(args []string) (interface{}, error) {
 func vmList() ([]VM, error) {
 	out, err := exec.Command("virsh", "-c", "qemu:///system", "list", "--all", "--name").Output()
 	if err != nil {
-		return []VM{}, nil
+		return nil, err
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
