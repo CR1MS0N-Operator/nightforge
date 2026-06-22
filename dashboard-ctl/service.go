@@ -18,7 +18,7 @@ var monitoredServices = []struct {
 }{
 	{"hermes-gateway", "user"},
 	{"sshd", "system"},
-	{"docker", "system"},
+	{"podman", "system"},
 	{"libvirtd", "system"},
 	{"wg-quick@wg0", "system"},
 	{"quickshell", "user"},
@@ -49,18 +49,22 @@ func serviceCmd(args []string) (interface{}, error) {
 func serviceList() ([]Service, error) {
 	var services []Service
 	for _, svc := range monitoredServices {
-		status := "inactive"
+		var cmd *exec.Cmd
 		if svc.Type == "user" {
-			out, err := exec.Command("systemctl", "--user", "is-active", svc.Name).Output()
-			if err == nil && strings.TrimSpace(string(out)) == "active" {
-				status = "active"
-			}
+			cmd = exec.Command("systemctl", "--user", "is-active", svc.Name)
 		} else {
-			out, err := exec.Command("systemctl", "is-active", svc.Name).Output()
-			if err == nil && strings.TrimSpace(string(out)) == "active" {
-				status = "active"
-			}
+			cmd = exec.Command("systemctl", "is-active", svc.Name)
 		}
+
+		status := "inactive"
+		out, err := cmd.Output()
+		state := strings.TrimSpace(string(out))
+		if err == nil && state == "active" {
+			status = "active"
+		} else if err != nil && state == "" {
+			return nil, fmt.Errorf("systemctl is-active %s failed: %v", svc.Name, err)
+		}
+
 		services = append(services, Service{
 			Name:   svc.Name,
 			Type:   svc.Type,

@@ -36,9 +36,9 @@ func containerCmd(args []string) (interface{}, error) {
 }
 
 func containerList() ([]Container, error) {
-	out, err := exec.Command("docker", "ps", "-a", "--format", "{{.Names}}|{{.Status}}|{{.Image}}|{{.Ports}}").Output()
+	out, err := exec.Command("podman", "ps", "-a", "--format", "{{.Names}}|{{.Status}}|{{.Image}}|{{.Ports}}").Output()
 	if err != nil {
-		return []Container{}, nil
+		return nil, err
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
@@ -74,7 +74,7 @@ func containerList() ([]Container, error) {
 }
 
 func containerStart(name string) (interface{}, error) {
-	err := exec.Command("docker", "start", name).Run()
+	err := exec.Command("podman", "start", name).Run()
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func containerStart(name string) (interface{}, error) {
 }
 
 func containerStop(name string) (interface{}, error) {
-	err := exec.Command("docker", "stop", name).Run()
+	err := exec.Command("podman", "stop", name).Run()
 	if err != nil {
 		return nil, err
 	}
