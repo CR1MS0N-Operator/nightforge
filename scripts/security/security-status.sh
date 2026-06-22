@@ -44,7 +44,7 @@ sudo ss -tulpn | grep LISTEN | awk '{print "  "$5" → "$7}' | sort -u
 # Recent Failed Logins
 echo ""
 echo "[5] Recent Failed Login Attempts (last 24h):"
-FAILED=$(sudo journalctl --since "24 hours ago" 2>/dev/null | grep -i "failed" | grep -i "auth\|login\|ssh" | wc -l)
+FAILED=$(sudo journalctl --since "24 hours ago" 2>/dev/null | grep -ciE "failed.*(auth|login|ssh)")
 echo "  Count: $FAILED"
 if [ "$FAILED" -gt 0 ]; then
     sudo journalctl --since "24 hours ago" 2>/dev/null | grep -i "failed" | grep -i "auth\|login\|ssh" | tail -5 | sed 's/^/  /'
@@ -72,7 +72,7 @@ echo "[8] Filesystem Security:"
 echo "  /tmp mount options:"
 mount | grep " /tmp " | awk '{print "    "$6}' || echo "    Default (not secured)"
 echo "  Home directory permissions:"
-ls -ld /home/$USER | awk '{print "    "$1}'
+stat -c '%A' "$HOME" | awk '{print "    "$1}'
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

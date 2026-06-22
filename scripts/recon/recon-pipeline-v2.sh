@@ -235,7 +235,8 @@ filter_scope() {
     
     # Apply exclusions if provided
     if [ -n "$EXCLUDE_FILE" ] && [ -s "$EXCLUDE_FILE" ]; then
-        local temp_file=$(mktemp)
+        local temp_file
+        temp_file=$(mktemp)
         grep -vFf "$EXCLUDE_FILE" "$output_file" > "$temp_file" 2>/dev/null || touch "$temp_file"
         mv "$temp_file" "$output_file"
     fi
@@ -265,7 +266,7 @@ if [ "$SKIP_SUBDOMAIN" = false ]; then
         i=0
         while kill -0 $AMASS_PID 2>/dev/null; do
             i=$(( (i+1) %4 ))
-            printf "\r  ${spin:$i:1} Enumerating..."
+            printf "\r  %s Enumerating...                      " "${spin:$i:1}"
             sleep .1
         done
         wait $AMASS_PID
@@ -282,7 +283,7 @@ if [ "$SKIP_SUBDOMAIN" = false ]; then
         i=0
         while kill -0 $AMASS_PID 2>/dev/null; do
             i=$(( (i+1) %4 ))
-            printf "\r  ${spin:$i:1} Enumerating (active scan)..."
+            printf "\r  %s Enumerating (active scan)...        " "${spin:$i:1}"
             sleep .1
         done
         wait $AMASS_PID
@@ -302,7 +303,7 @@ if [ "$SKIP_SUBDOMAIN" = false ]; then
             i=$(( (i+1) %4 ))
             elapsed=$((elapsed + 1))
             minutes=$((elapsed / 600))
-            printf "\r  ${spin:$i:1} Enumerating (deep scan) - ${minutes}m elapsed..."
+            printf "\r  %s Enumerating (deep scan) - %sm elapsed..." "${spin:$i:1}" "$minutes"
             sleep .1
         done
         wait $AMASS_PID
@@ -350,7 +351,7 @@ else
 fi
 
 # 1.3 - Cloud Asset Discovery
-if [ "$SKIP_CLOUD" = false ] && ([ "$MODE" = "balanced" ] || [ "$MODE" = "deep" ]); then
+if [ "$SKIP_CLOUD" = false ] && { [ "$MODE" = "balanced" ] || [ "$MODE" = "deep" ]; }; then
     echo -e "${YELLOW}[1.3]${NC} Cloud Asset Discovery (cloud_enum)"
     
     KEYWORD=$(echo "$TARGET" | cut -d'.' -f1)
@@ -423,7 +424,7 @@ if [ -s "$OUTPUT_DIR/dns/live-hosts.txt" ]; then
         i=0
         while kill -0 $NAABU_PID 2>/dev/null; do
             i=$(( (i+1) %4 ))
-            printf "\r  ${spin:$i:1} Scanning ports..."
+            printf "\r  %s Scanning ports..." "${spin:$i:1}"
             sleep .1
         done
         wait $NAABU_PID
@@ -623,7 +624,7 @@ $([ "$SKIP_CLOUD" = false ] && echo "| Cloud Assets | ${CLOUD_COUNT:-0} |")
 $(head -20 "$OUTPUT_DIR/subdomains/all-subdomains.txt" 2>/dev/null || echo "No subdomains found")
 \`\`\`
 
-$([ ${SUBDOMAIN_COUNT} -gt 20 ] && echo "*(Showing first 20 of ${SUBDOMAIN_COUNT} total)*")
+$([ "${SUBDOMAIN_COUNT}" -gt 20 ] && echo "*(Showing first 20 of ${SUBDOMAIN_COUNT} total)*")
 
 ---
 
@@ -633,7 +634,7 @@ $([ ${SUBDOMAIN_COUNT} -gt 20 ] && echo "*(Showing first 20 of ${SUBDOMAIN_COUNT
 $(head -20 "$OUTPUT_DIR/http/live-urls.txt" 2>/dev/null || echo "No HTTP services found")
 \`\`\`
 
-$([ ${HTTP_COUNT} -gt 20 ] && echo "*(Showing first 20 of ${HTTP_COUNT} total)*")
+$([ "${HTTP_COUNT}" -gt 20 ] && echo "*(Showing first 20 of ${HTTP_COUNT} total)*")
 
 ---
 

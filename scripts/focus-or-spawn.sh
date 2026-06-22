@@ -101,7 +101,6 @@ fi
 # No matching window — spawn the command
 log "Spawning: ${COMMAND[*]}"
 "${COMMAND[@]}" &
-PID=$!
 
 # If scratchpad mode, wait a moment for the window to appear, then move it
 if [[ "$SCRATCH" -eq 1 ]]; then

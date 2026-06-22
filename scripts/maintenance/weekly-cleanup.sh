@@ -72,13 +72,13 @@ if [ -d ~/Downloads ]; then
             1)
                 ARCHIVE_DIR="$HOME/Archives/downloads-$(date +%Y%m%d)"
                 mkdir -p "$ARCHIVE_DIR"
-                echo "$OLD_FILES" | while read file; do
+                echo "$OLD_FILES" | while read -r file; do
                     mv "$file" "$ARCHIVE_DIR/" 2>/dev/null || true
                 done
                 echo "  ✓ Archived to $ARCHIVE_DIR"
                 ;;
             2)
-                echo "$OLD_FILES" | while read file; do
+                echo "$OLD_FILES" | while read -r file; do
                     rm "$file" 2>/dev/null || true
                 done
                 echo "  ✓ Deleted $OLD_COUNT files"
@@ -103,12 +103,13 @@ ORPHANS=$(pacman -Qdtq 2>/dev/null)
 if [ -n "$ORPHANS" ]; then
     ORPHAN_COUNT=$(echo "$ORPHANS" | wc -l)
     echo "  📦 Found $ORPHAN_COUNT orphaned packages:"
+    # shellcheck disable=SC2001 # variable subst doesn't handle multiline well
     echo "$ORPHANS" | sed 's/^/    - /'
     echo ""
     read -p "  Remove these packages? [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        sudo pacman -Rns $(pacman -Qdtq) --noconfirm
+        sudo pacman -Rns "$ORPHANS" --noconfirm
         echo "  ✓ Orphans removed"
     else
         echo "  ⏭  Skipped"

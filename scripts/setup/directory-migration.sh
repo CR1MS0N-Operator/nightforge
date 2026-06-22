@@ -50,7 +50,7 @@ move_dir ~/VMs                         ~/lab/VMs
 if [[ -d ~/Labs ]]; then
     echo "Moving contents of ~/Labs into ~/lab/ – please manually sort later."
     mv -v ~/Labs/* ~/lab/ 2>/dev/null || true
-    rmdir ~/Labs 2>/dev/null || echo "~/Labs not empty after move, check manually."
+    rmdir ~/Labs 2>/dev/null || echo "$HOME/Labs not empty after move, check manually."
 fi
 
 # --- Move personal directories (Archives, Backups, github-backups) ---

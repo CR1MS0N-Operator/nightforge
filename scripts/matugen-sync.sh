@@ -53,7 +53,8 @@ backup_existing() {
     local file="$1"
     if [[ -f "$file" ]]; then
         mkdir -p "$BACKUP_DIR"
-        local backup="$BACKUP_DIR/$(basename "$file").$(date +%Y%m%d_%H%M%S)"
+        local backup
+        backup="$BACKUP_DIR/$(basename "$file").$(date +%Y%m%d_%H%M%S)"
         cp "$file" "$backup"
         log_info "Backed up $(basename "$file")"
     fi
@@ -336,7 +337,7 @@ if [[ -f "$TMP_DIR/colors.json" ]]; then
     surface1=$(jq -r '.colors.outline // "#45475a"' "$TMP_DIR/colors.json")
     overlay0=$(jq -r '.colors.outline // "#6c7086"' "$TMP_DIR/colors.json")
     mauve=$(jq -r '.colors.primary // "#cba6f7"' "$TMP_DIR/colors.json")
-    profile=$(ls -d "$HOME/.mozilla/firefox/"*".default-release" 2>/dev/null | head -1)
+    profile=$(find "$HOME/.mozilla/firefox/" -maxdepth 1 -name '*.default-release' -print -quit 2>/dev/null)
     
     if [[ -n "$profile" ]]; then
         cat > "$profile/chrome/userChrome.css" << FOX_EOF

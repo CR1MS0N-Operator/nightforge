@@ -7,7 +7,7 @@ TRIGGER_FILE="$HOME/.local/state/quickshell/toggle-trigger"
 
 # Ensure trigger file exists
 mkdir -p "$(dirname "$TRIGGER_FILE")"
-> "$TRIGGER_FILE"
+: > "$TRIGGER_FILE"
 
 # Check if inotifywait is available
 if ! command -v inotifywait &>/dev/null; then
@@ -18,7 +18,7 @@ if ! command -v inotifywait &>/dev/null; then
             CONTENT=$(cat "$TOGGLE_FILE" 2>/dev/null)
             if [[ "$CONTENT" != "$LAST_CONTENT" && -n "$CONTENT" ]]; then
                 echo "$CONTENT" >> "$TRIGGER_FILE"
-                > "$TOGGLE_FILE"
+                : > "$TOGGLE_FILE"
                 LAST_CONTENT="$CONTENT"
             fi
         fi
@@ -31,7 +31,7 @@ else
         CONTENT=$(cat "$TOGGLE_FILE" 2>/dev/null)
         if [[ -n "$CONTENT" ]]; then
             echo "$CONTENT" >> "$TRIGGER_FILE"
-            > "$TOGGLE_FILE"
+            : > "$TOGGLE_FILE"
         fi
     done
 fi

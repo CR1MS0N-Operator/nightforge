@@ -60,7 +60,8 @@ warn_not_in_engagement() {
 build() {
     local PROFILE="$1"
     local IMAGE="localhost/offsec-${PROFILE}:0.1.0"
-    local DATE_TAG="localhost/offsec-${PROFILE}:$(date +%Y%m%d)"
+    local DATE_TAG
+    DATE_TAG="localhost/offsec-${PROFILE}:$(date +%Y%m%d)"
     local CONTAINERFILE="$REPO_ROOT/modules/container/${PROFILE}/Containerfile"
 
     [[ -f "$CONTAINERFILE" ]] || {

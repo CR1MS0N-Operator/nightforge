@@ -323,7 +323,7 @@ else
 fi
 
 # 1.3 - Cloud Asset Discovery
-if [ "$SKIP_CLOUD" = false ] && ([ "$MODE" = "balanced" ] || [ "$MODE" = "deep" ]); then
+if [ "$SKIP_CLOUD" = false ] && { [ "$MODE" = "balanced" ] || [ "$MODE" = "deep" ]; }; then
     echo -e "${YELLOW}[1.3]${NC} Cloud Asset Discovery (cloud_enum)"
 
     KEYWORD=$(echo "$TARGET" | cut -d'.' -f1)
@@ -389,7 +389,7 @@ if [ -s "$OUTPUT_DIR/dns/live-hosts.txt" ]; then
         i=0
         while kill -0 $NAABU_PID 2>/dev/null; do
             i=$(( (i+1) %4 ))
-            printf "\r  ${spin:$i:1} Scanning ports..."
+            printf "\r  %s Scanning ports..." "${spin:$i:1}"
             sleep .1
         done
         wait $NAABU_PID
