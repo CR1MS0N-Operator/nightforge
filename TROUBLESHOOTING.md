@@ -15,10 +15,112 @@ grep -rn "/quickshell/quickshell/" ~/.config/quickshell/
 ```
 **Prevention:** Set reasonable polling intervals (>2s), ensure all script paths exist
 
-### Widget opens and immediately closes
+### IPC command processed twice
 **Symptom:** Widget flashes on screen then disappears
 **Root cause:** IPC command processed twice — once by ipcWatcher (inotifywait) and once by ipcPoller (timer)
-**Fix:** Disable one of the two IPC handlers. Current config uses poller only.
+**Fix:** Ensure only one IPC method is active. Check which is enabled in the Quickshell config.
+
+---
+
+## Niri Compositor
+
+### Blue window borders / focus ring visible
+**Symptom:** Windows have a blue border or visible focus ring despite being disabled
+**Root cause:** The nightforge `compositor.kdl` has `border { width 0 }` instead of `border { off }` and is missing `focus-ring { off }`
+**Fix:**
+```bash
+# Replace width 0 with off for borders
+sed -i 's/        width 0/        off/' ~/.config/niri/includes/compositor.kdl
+# Add focus-ring block after shadow block if missing
+# Edit compositor.kdl and add inside the layout block after shadows
+```
+**Prevention:** After any `git checkout` of compositor.kdl from nightforge, run the sed command above.
+
+### Niri config invalid after changes
+**Symptom:** `niri validate` shows parse errors
+**Root cause:** `focus-ring { }` must be inside the `layout { }` block, not at file level
+**Fix:** Move focus-ring inside layout block, after the shadow section
+**Verify:** Run `niri validate` — should print "config is valid" with no errors
+
+---
+
+## Kitty Terminal
+
+### Not transparent or wrong colors
+**Symptom:** Kitty has solid background instead of transparent, or colors are wrong
+**Root cause:** 
+1. Kitty is not running (`pgrep -a kitty` returns nothing)
+2. matugen colors haven't been regenerated
+**Fix:**
+```bash
+# Launch Kitty
+kitty &
+# Regenerate matugen colors
+~/.local/bin/matugen-sync.sh
+```
+**Verify:** Kitty window should show transparency (background_opacity 0.95) with matugen-themed colors
+
+### Kitty config symlink broken
+**Symptom:** Kitty loses all config
+**Root cause:** Config file at `~/.config/kitty/kitty.conf` is deleted or replaced
+**Fix:**
+```bash
+ls -la ~/.config/kitty/kitty.conf  # Check if symlink exists
+# If broken, restore from backup or nightforge
+cp ~/.config/kitty/kitty.conf.bak ~/.config/kitty/kitty.conf 2>/dev/null
+kitty --reload-in=all
+```
+
+---
+
+## Ghostty
+
+### Config reverts to non-transparent / wrong settings
+**Symptom:** Ghostty loses transparency, window decoration settings, or matugen colors
+**Root cause:** `matugen-sync.sh` uses `mv` in its `append_ghostty_colors()` function, which replaces the symlink with a regular file
+**Fix:**
+```bash
+# Restore the symlink
+rm -f ~/.config/ghostty/config
+ln -s ~/Github/nightforge/dotfiles/ghostty/.config/ghostty/config ~/.config/ghostty/config
+# Re-inject matugen colors through the symlink
+~/.local/bin/matugen-sync.sh
+# Restart Ghostty (close + reopen)
+```
+**Permanent fix:** Edit `~/.local/bin/matugen-sync.sh` — change `mv "$tmp_ghostty" "$ghostty_config"` to `cp "$tmp_ghostty" "$ghostty_config"` in the `append_ghostty_colors()` function.
+**Prevention:** After every wallpaper rotation (matugen run), check that Ghostty config is still a symlink: `stat -c '%F' ~/.config/ghostty/config` should say "symbolic link".
+
+---
+
+## Agent Tools
+
+### Codex CLI returns 401 "User not found"
+**Symptom:** Codex interactive mode fails with 401 on `/api/v1/responses`
+**Root cause:** Stale cached goal in `~/.codex/attachments/`
+**Fix:**
+```bash
+rm -rf ~/.codex/attachments/*
+```
+**Prevention:** Use `codex exec "prompt"` instead of interactive mode for fresh sessions.
+
+### OMP returns 401 "User not found"
+**Symptom:** OMP fails immediately with 401
+**Root cause:** OpenRouter guardrail blocking the request. Has occurred intermittently since S037.
+**Fix:**
+```bash
+# Pass API key explicitly
+omp -p "prompt" --api-key "$OPENROUTER_API_KEY"
+```
+**Alternative:** Switch OMP to OpenCode API by setting `OPENCODE_GO_API_KEY` env var.
+
+### Hermes compression fails with 401
+**Symptom:** "Compression aborted: Error code: 401"
+**Root cause:** Compression auxiliary model uses `qwen2.5-coder:3b` on OpenRouter — not a valid OpenRouter model ID
+**Fix:**
+```bash
+hermes config set compression.enabled false
+```
+**Rationale:** Daily driver model has 1M+ context window — compression is unnecessary.
 
 ### "GlassPanel is not a type" error
 **Symptom:** Widget fails to load, GlassPanel component not found
