@@ -125,7 +125,7 @@
 | **Center layout broken** | MouseArea missing closing `}` — rightContent became child of MouseArea | Added missing `}` |
 | **Lock screen solid red** | CSS `background-image: none` overrode `--background` flag | Removed `background-image: none`, added `background-size: cover` |
 
-### Remaining Issues for Next Session
+### Remaining Issues
 1. **Blue window border** — Niri's built-in focus indicator; not configurable via `border` setting
 2. **Help menu content** — GuidePopup.qml needs full rewrite for NightForge content
 3. **Network hub-and-bubble** — Improve visual layout
