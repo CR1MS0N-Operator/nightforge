@@ -83,3 +83,5 @@ dotfiles/niri/.config/niri/dms-backup/
 # Auto-generated node files (no project deps)
 package.json
 package-lock.json
+# Aider (removed)
+.aider*

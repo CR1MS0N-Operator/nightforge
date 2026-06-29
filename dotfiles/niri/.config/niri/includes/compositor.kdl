@@ -23,7 +23,7 @@ layout {
 
     // Border / decorations: off for all windows (CSD apps handle their own)
     border {
-        width 0
+        off
     }
 
     // Shadows (disabled for performance)
@@ -35,6 +35,11 @@ layout {
         // offset x=0 y=5
         // color "#0007"
     }
+    
+        // Focus ring — disabled
+        focus-ring {
+            off
+        }
 }
 
 // Cursor theme

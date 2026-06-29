@@ -1,0 +1,13 @@
+BarButton 1.0 BarButton.qml
+CAnim 1.0 CAnim.qml
+CtrlBtn 1.0 CtrlBtn.qml
+GlassPanel 1.0 GlassPanel.qml
+MaterialIcon 1.0 MaterialIcon.qml
+Scaler 1.0 Scaler.qml
+StatusIcon 1.0 StatusIcon.qml
+StatusPill 1.0 StatusPill.qml
+StyledRect 1.0 StyledRect.qml
+StyledText 1.0 StyledText.qml
+ToggleButton 1.0 ToggleButton.qml
+VolumeSlider 1.0 VolumeSlider.qml
+WorkspaceButton 1.0 WorkspaceButton.qml

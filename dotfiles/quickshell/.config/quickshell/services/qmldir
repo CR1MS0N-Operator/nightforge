@@ -1,4 +1,7 @@
+AudioService 1.0 AudioService.qml
+CavaService 1.0 CavaService.qml
 MatugenColors 1.0 MatugenColors.qml
 MpdClient 1.0 MpdClient.qml
-VpnStatus 1.0 VpnStatus.qml
 PodmanStatus 1.0 PodmanStatus.qml
+SysData 1.0 SysData.qml
+VpnStatus 1.0 VpnStatus.qml
