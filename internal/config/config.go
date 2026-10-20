@@ -54,7 +54,10 @@ func DefaultConfig() *Config {
 			Enabled:    true,
 		},
 		Langfuse: LangfuseConfig{
-			OTLPEndpoint: "http://127.0.0.1:31744",
+			// The canonical Langfuse on this workstation. The duplicate in
+			// 10-layer-stack/observability-stack and its OTel Collector on
+			// :31744 were retired 2026-10-19 (bead nightforge-aaj).
+			OTLPEndpoint: "http://127.0.0.1:50598",
 			Enabled:      false,
 		},
 		Agents: []AgentConfig{

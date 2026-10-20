@@ -1,9 +1,12 @@
 package collector
 
 import (
+	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -45,6 +48,13 @@ func DiscoverHerdr(socketPath string) DiscoveredService {
 	return svc
 }
 
+// DefaultLangfuseEndpoint is the canonical Langfuse instance on this
+// workstation. The duplicate Langfuse that used to live in
+// 10-layer-stack/observability-stack (and the OTel Collector feeding it on
+// :31744) was retired on 2026-10-19 — see bead nightforge-aaj. The live
+// instance runs outside this repository on :50598.
+const DefaultLangfuseEndpoint = "http://127.0.0.1:50598"
+
 // DiscoverLangfuse checks if Langfuse is reachable at the OTLP endpoint.
 func DiscoverLangfuse(endpoint string) DiscoveredService {
 	svc := DiscoveredService{
@@ -54,10 +64,15 @@ func DiscoverLangfuse(endpoint string) DiscoveredService {
 	}
 
 	if endpoint == "" {
-		endpoint = "http://127.0.0.1:31744"
+		endpoint = DefaultLangfuseEndpoint
 	}
 
-	conn, err := net.DialTimeout("tcp", "127.0.0.1:31744", 2*time.Second)
+	host, port, err := hostPort(endpoint)
+	if err != nil {
+		return svc
+	}
+
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), 2*time.Second)
 	if err != nil {
 		return svc
 	}
@@ -66,6 +81,31 @@ func DiscoverLangfuse(endpoint string) DiscoveredService {
 	svc.Status = "connected"
 	svc.Address = endpoint
 	return svc
+}
+
+// hostPort extracts the dial host and port from an endpoint URL. It accepts
+// a bare host:port as well as a full URL, and rejects anything without a
+// port — a Langfuse endpoint always has one.
+func hostPort(endpoint string) (string, string, error) {
+	raw := endpoint
+	if !strings.Contains(raw, "://") {
+		raw = "http://" + raw
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", "", err
+	}
+
+	host := u.Hostname()
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port := u.Port()
+	if port == "" {
+		return "", "", fmt.Errorf("no port in endpoint %q", endpoint)
+	}
+	return host, port, nil
 }
 
 // DiscoverAgents checks which agents are available on the system.

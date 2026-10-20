@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "nightforge",
+  "project_id": "5be58955-9aea-48c2-95e8-df64ba1283cf"
+}
