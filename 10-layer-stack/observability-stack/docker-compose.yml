@@ -1,20 +1,26 @@
-# S189 four-agent observability stack.
-# Operator must populate .env with real Langfuse/Grafana secrets before startup.
-# No service is started by this file creation.
+# NightForge observability stack — metrics only.
+#
+# RETIRED 2026-10-19 (bead nightforge-aaj): the Langfuse services and the
+# OTel Collector were removed from this file. The canonical Langfuse runs
+# outside this repo on 127.0.0.1:50598 (docker project `langfuse`, compose at
+# ~/Documents/ai-lab-vault/20-Tools/agentsview-langfuse-setup/langfuse/).
+# See PORT-REGISTRY-PROPOSAL.md for the port rows this stack still needs.
+#
+# What remains measures real things and is not duplicated by the canonical
+# Langfuse (which exposes no /metrics endpoint at all):
+#   prometheus    — scrapes node-exporter
+#   node-exporter — host CPU/memory/disk/load
+#   grafana       — visualises the Prometheus datasource
+#
+# No service is started by this file. The operator starts the stack after
+# creating .env from .env.example.
+#
+# Secrets: the only secret left is GRAFANA_ADMIN_PASSWORD, and it is
+# required (${VAR:?...}) — compose fails at parse time when it is unset or
+# empty rather than starting Grafana with a placeholder password.
 name: cr1mson-observability
 
 services:
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.129.1
-    restart: unless-stopped
-    command: ["--config=/etc/otelcol-contrib/config.yaml"]
-    ports:
-      - "127.0.0.1:31744:4317"
-    volumes:
-      - ./otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
-    environment:
-      LANGFUSE_AUTH_STRING: ${LANGFUSE_AUTH_STRING:-REPLACE_WITH_BASE64_PUBLIC_KEY_COLON_SECRET}
-
   prometheus:
     image: prom/prometheus:v3.5.0
     restart: unless-stopped
@@ -37,13 +43,18 @@ services:
     environment:
       GF_SERVER_HTTP_ADDR: 127.0.0.1
       GF_SERVER_HTTP_PORT: "31746"
+      # The username is not a secret — a default is harmless and the admin
+      # account name is operator-facing, not confidential.
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-REPLACE_BEFORE_START}
+      # The password IS a secret. ${VAR:?...} makes compose refuse to render
+      # the file when the variable is unset or empty, so a missing .env can
+      # never silently start Grafana with a placeholder credential.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required - copy .env.example to .env and set a real secret}
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana-provisioning:/etc/grafana/provisioning:ro
-      - ./grafana-dashboard.json:/var/lib/grafana/dashboards/four-agent-architecture.json:ro
+      - ./nightforge-metrics.json:/var/lib/grafana/dashboards/nightforge-metrics.json:ro
 
   node-exporter:
     image: prom/node-exporter:v1.9.1
@@ -60,140 +71,6 @@ services:
       - /sys:/host/sys:ro
       - /:/host:ro,rslave
 
-  langfuse-web:
-    image: docker.io/langfuse/langfuse:4
-    restart: always
-    depends_on: &langfuse-depends-on
-      postgres:
-        condition: service_healthy
-      clickhouse:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:31747:3000"
-    environment: &langfuse-env
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://127.0.0.1:31747}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD:-REPLACE_POSTGRES_PASSWORD}@postgres:5432/postgres}
-      SALT: ${SALT:-REPLACE_WITH_RANDOM_SALT}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-REPLACE_WITH_64_HEX_CHAR_KEY}
-      TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-false}
-      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: ${LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES:-false}
-      CLICKHOUSE_MIGRATION_URL: ${CLICKHOUSE_MIGRATION_URL:-clickhouse://clickhouse:9000}
-      CLICKHOUSE_URL: ${CLICKHOUSE_URL:-http://clickhouse:8123}
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-REPLACE_CLICKHOUSE_PASSWORD}
-      # Single-node ClickHouse: no Zookeeper/Keeper quorum available.
-      # false -> migrations use clickhouse/migrations/unclustered + MergeTree.
-      # true (default) -> ON CLUSTER + ReplicatedMergeTree, which needs Zookeeper.
-      CLICKHOUSE_CLUSTER_ENABLED: ${CLICKHOUSE_CLUSTER_ENABLED:-false}
-      LANGFUSE_USE_AZURE_BLOB: "false"
-      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
-      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
-      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-REPLACE_MINIO_USER}
-      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-REPLACE_MINIO_PASSWORD}
-      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
-      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
-      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
-      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
-      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
-      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-REPLACE_MINIO_USER}
-      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-REPLACE_MINIO_PASSWORD}
-      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
-      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
-      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      REDIS_AUTH: ${REDIS_AUTH:-REPLACE_REDIS_PASSWORD}
-      LANGFUSE_BULLMQ_SKIP_REDIS_VERSION_CHECK: "false"
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-REPLACE_WITH_RANDOM_NEXTAUTH_SECRET}
-      LANGFUSE_INIT_ORG_ID: ${LANGFUSE_INIT_ORG_ID:-}
-      LANGFUSE_INIT_ORG_NAME: ${LANGFUSE_INIT_ORG_NAME:-}
-      LANGFUSE_INIT_PROJECT_ID: ${LANGFUSE_INIT_PROJECT_ID:-}
-      LANGFUSE_INIT_PROJECT_NAME: ${LANGFUSE_INIT_PROJECT_NAME:-}
-      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:-}
-      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:-}
-      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
-      LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-}
-      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
-
-  langfuse-worker:
-    image: docker.io/langfuse/langfuse-worker:4
-    restart: always
-    depends_on: *langfuse-depends-on
-    environment: *langfuse-env
-
-  clickhouse:
-    image: docker.io/clickhouse/clickhouse-server:25.12
-    restart: always
-    user: "101:101"
-    environment:
-      CLICKHOUSE_DB: default
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-REPLACE_CLICKHOUSE_PASSWORD}
-    volumes:
-      - langfuse_clickhouse_data:/var/lib/clickhouse
-      - langfuse_clickhouse_logs:/var/log/clickhouse-server
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 5s
-
-  minio:
-    image: cgr.dev/chainguard/minio:latest
-    restart: always
-    entrypoint: sh
-    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-REPLACE_MINIO_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-REPLACE_MINIO_PASSWORD}
-    volumes:
-      - langfuse_minio_data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 3s
-      timeout: 5s
-      retries: 10
-      start_period: 5s
-
-  redis:
-    image: docker.io/redis:7
-    restart: always
-    command: ["redis-server", "--requirepass", "${REDIS_AUTH:-REPLACE_REDIS_PASSWORD}", "--maxmemory-policy", "noeviction"]
-    volumes:
-      - langfuse_redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_AUTH:-REPLACE_REDIS_PASSWORD}", "ping"]
-      interval: 3s
-      timeout: 10s
-      retries: 10
-
-  postgres:
-    image: docker.io/postgres:17
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-REPLACE_POSTGRES_PASSWORD}
-      POSTGRES_DB: postgres
-      TZ: UTC
-      PGTZ: UTC
-    volumes:
-      - langfuse_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 3s
-      timeout: 3s
-      retries: 10
-
 volumes:
   prometheus_data:
   grafana_data:
-  langfuse_postgres_data:
-  langfuse_clickhouse_data:
-  langfuse_clickhouse_logs:
-  langfuse_minio_data:
-  langfuse_redis_data:

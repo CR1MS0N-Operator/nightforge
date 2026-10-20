@@ -50,11 +50,16 @@ in `docs/plans/` and `docs/solutions/`.
 
 ## Observability Stack
 
-`10-layer-stack/observability-stack/` (Docker Compose: OTel, Prometheus,
-Grafana, Langfuse, node-exporter) — L2/L9 substrate for AgentGateway traces
-and host metrics. **Not started automatically.** Operator starts it after
-populating `.env`; ports 31744–31750, all loopback-bound. See
-`10-layer-stack/README.md`.
+`10-layer-stack/observability-stack/` (Docker Compose: Prometheus, Grafana,
+node-exporter) — host-metrics substrate. **Not started automatically.**
+Operator creates `.env` (the Grafana admin password is *required* — compose
+errors at parse time without it) and starts it; ports 31745/31746/31750, all
+loopback-bound. See `10-layer-stack/README.md`.
+
+Trace/LLM observability is **not** in this repo: the canonical Langfuse runs
+on `127.0.0.1:50598` outside the repository. The duplicate Langfuse and its
+OTel Collector (`:31744`) were retired 2026-10-19 — bead `nightforge-aaj`,
+see `10-layer-stack/observability-stack/PORT-REGISTRY-PROPOSAL.md`.
 
 ## Constraints
 
@@ -167,3 +172,10 @@ bd prime                # Refresh Beads context
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/core-concepts/sync-concepts.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
+
+## Maintaining this file
+
+Keep this file for knowledge useful to almost every future agent session in this project.
+Do not repeat what the codebase already shows; point to the authoritative file or command instead.
+Prefer rewriting or pruning existing entries over appending new ones.
+When updating this file, preserve this bar for all agents and keep entries concise.
