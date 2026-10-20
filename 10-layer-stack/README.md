@@ -1,3 +1,8 @@
+> **Numbering notice (2026-10-18, decision #205).** The layers in this directory are the **AlphaSignal
+> improvement-loop overlay**, now labelled **`A1–A10`**. The authoritative project spine is the vault's
+> **`L1–L10`** frame (`05-Architecture/10-layer-architecture-2026-09.md`). The single crosswalk between the
+> two lives in **`05-Architecture/frame-adjudication-10-layer.md`**. Do not restate the mapping here; link it.
+
 # 10-Layer Stack
 
 Implementation home for the CR1MS0N self-improving harness architecture (L1–L10).
