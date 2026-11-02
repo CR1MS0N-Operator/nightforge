@@ -52,10 +52,13 @@ observability, measurement). Completed items are recorded in
   versioning/rollback (L7) → routing (L8)
 - JSONL evidence store under `data/`
 
-### Phase B — Observability Substrate ✅ COMPLETE
-- OTel Collector, Prometheus, Grafana, node-exporter, Langfuse
-  (`10-layer-stack/observability-stack/`)
-- AgentGateway trace + host/agent metric collection (loopback-only ports)
+### Phase B — Observability Substrate ✅ COMPLETE (rescoped 2026-10-19)
+- Prometheus, Grafana, node-exporter (`10-layer-stack/observability-stack/`)
+- Host metric collection (loopback-only ports 31745/31746/31750)
+- Trace/LLM telemetry moved to the canonical Langfuse on `127.0.0.1:50598`,
+  which runs outside this repository. The duplicate Langfuse and the OTel
+  Collector (`:31744`) were retired — see
+  `10-layer-stack/observability-stack/PORT-REGISTRY-PROPOSAL.md`
 
 ### Phase C — Benefit Measurement (NEXT)
 - **L9** — FAIR-modeled benefit measurement from validation evidence

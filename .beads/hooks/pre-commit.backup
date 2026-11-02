@@ -1,0 +1,30 @@
+#!/bin/bash
+# Pre-commit hook: scan staged files for sensitive patterns
+set -euo pipefail
+ERRORS=0
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+for file in $STAGED; do
+  case "$file" in *.example|*.nix|data/*) continue ;; esac
+  if grep -inP 'foreverlx' "$file" 2>/dev/null | grep -q .; then
+    echo "ERROR: $file contains ForeverLX reference"
+    ERRORS=$((ERRORS + 1))
+  fi
+  if grep -nP '192\.168\.[0-9]+\.' "$file" 2>/dev/null | grep -v '192\.168\.X\.' | grep -q .; then
+    echo "ERROR: $file contains real LAN IP"
+    ERRORS=$((ERRORS + 1))
+  fi
+  if grep -nP '10\.0\.0\.' "$file" 2>/dev/null | grep -q .; then
+    echo "ERROR: $file contains 10.0.0.x mesh IP"
+    ERRORS=$((ERRORS + 1))
+  fi
+  if grep -nP '[A-Za-z0-9+/]{43}=' "$file" 2>/dev/null | grep -v 'REDACTED' | grep -q .; then
+    echo "WARNING: $file may contain WireGuard key"
+    ERRORS=$((ERRORS + 1))
+  fi
+done
+if [ "$ERRORS" -gt 0 ]; then
+  echo "Commit blocked: $ERRORS security issue(s). Use --no-verify to bypass."
+  exit 1
+fi
+echo "Pre-commit security check: PASS"
+exit 0

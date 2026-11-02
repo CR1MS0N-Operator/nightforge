@@ -65,19 +65,24 @@ data/{failures,gates,proposals,snapshots,tokens,cost}/
 ### Observability Stack
 
 `10-layer-stack/observability-stack/` (Docker Compose, operator-started)
-collects AgentGateway traces and host/agent metrics for L2 (trace log) and
-future L9 (benefit measurement):
+collects **host metrics** for L4 health:
 
 | Service | Port (loopback) | Role |
 |---------|-----------------|------|
-| OTel Collector | 31744 (OTLP gRPC) | Receives traces → Prometheus + Langfuse |
-| Prometheus | 31745 (`127.0.0.2`) | Scrapes AgentGateway `/metrics` + node-exporter |
-| Grafana | 31746 | Dashboards (four-agent architecture) |
-| Langfuse | 31747 | Trace/LLM observability |
-| node-exporter | 31750 | Host metrics |
+| Prometheus | 31745 (`127.0.0.2`) | Scrapes node-exporter |
+| Grafana | 31746 | Host-metrics dashboard |
+| node-exporter | 31750 | Host CPU/memory/disk/load |
 
-Ports and startup procedure: `10-layer-stack/README.md` and
-`10-layer-stack/observability-stack/TROUBLESHOOTING.md`.
+Trace and LLM observability live in the **canonical Langfuse** outside this
+repository, on `127.0.0.1:50598` (docker project `langfuse`, compose at
+`~/Documents/ai-lab-vault/20-Tools/agentsview-langfuse-setup/langfuse/`).
+The duplicate Langfuse and the OTel Collector that fed it were retired on
+2026-10-19 (bead `nightforge-aaj`).
+
+Ports and startup procedure: `10-layer-stack/README.md`,
+`10-layer-stack/observability-stack/TROUBLESHOOTING.md`, and the port rows
+proposed for the vault registry in
+`10-layer-stack/observability-stack/PORT-REGISTRY-PROPOSAL.md`.
 
 ### CUE Config Migration
 

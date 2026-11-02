@@ -82,7 +82,7 @@ kitty --reload-in=all
 ```bash
 # Restore the symlink
 rm -f ~/.config/ghostty/config
-ln -s ~/Github/nightforge/dotfiles/ghostty/.config/ghostty/config ~/.config/ghostty/config
+ln -s ~/Projects/nightforge/dotfiles/ghostty/.config/ghostty/config ~/.config/ghostty/config
 # Re-inject matugen colors through the symlink
 ~/.local/bin/matugen-sync.sh
 # Restart Ghostty (close + reopen)
@@ -242,6 +242,28 @@ eval "$(starship init zsh)"
 Should be in `~/.zshrc`.
 
 ## General
+
+### Observability stack: services or ports missing
+**Symptom:** nothing listens on 31745 / 31746 / 31750, or `docker compose up`
+fails with "GRAFANA_ADMIN_PASSWORD is required".
+**Root cause:** the stack is operator-started and is **not running by
+default**; and since 2026-10-19 the only secret it needs is the Grafana
+admin password, declared `${GRAFANA_ADMIN_PASSWORD:?...}` so compose errors
+at parse time instead of substituting a placeholder.
+**Fix:**
+```bash
+cd ~/Projects/nightforge/10-layer-stack/observability-stack
+cp .env.example .env
+printf 'GRAFANA_ADMIN_PASSWORD=%s\n' "$(openssl rand -hex 16)" >> .env
+docker compose --env-file .env up -d
+```
+**Also note:** the repository is at `~/Projects/nightforge`.
+`~/Github/nightforge` does not exist on this workstation — `~/Github` is not
+present at all, so any command using the old path fails.
+**Trace/LLM observability** is not in this repository: the canonical
+Langfuse runs on `127.0.0.1:50598` (docker project `langfuse`). The
+duplicate Langfuse and the OTel Collector on `:31744` were retired
+2026-10-19. Details: `10-layer-stack/observability-stack/TROUBLESHOOTING.md`.
 
 ### "sudo: a terminal is required" error
 **Symptom:** sudo commands in scripts fail

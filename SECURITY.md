@@ -46,9 +46,13 @@ vulnerabilities.
 - `harnessd` binds **127.0.0.1:9191** only — no remote access
 - Go daemon makes zero external network calls (only `go-chi/chi/v5` + stdlib)
 - CORS middleware allows local development origins only (`GET`, `OPTIONS`)
-- Observability stack services bind loopback only (31744–31750, see
+- Observability stack services bind loopback only (31745, 31746, 31750, see
   `10-layer-stack/README.md`) — **not started automatically**; operator
-  populates `.env` secrets before first run
+  populates `.env` before first run. The only secret is the Grafana admin
+  password, and it is declared `${GRAFANA_ADMIN_PASSWORD:?...}` so compose
+  fails at parse time rather than starting with a placeholder credential.
+- Trace/LLM telemetry goes to the canonical Langfuse on `127.0.0.1:50598`,
+  which runs outside this repository
 
 ## Container Security
 

@@ -14,8 +14,32 @@ import (
 	"github.com/CR1MS0N-Operator/nightforge/internal/collector/model"
 )
 
-// historyDir stores time-series health snapshots.
-var historyDir = os.ExpandEnv("$HOME/Github/nightforge/data/history")
+// historyDir returns the directory holding time-series health snapshots.
+//
+// The repository lives at ~/Projects/nightforge on this workstation;
+// ~/Github/nightforge does not exist, so the old hardcoded path resolved to
+// nothing and every snapshot was written into a directory tree that was
+// never read back. NIGHTFORGE_DATA_DIR overrides it, matching the
+// convention already used by the shell scripts in scripts/harness/.
+//
+// Resolved per call, not at package init: the environment must be honoured
+// whenever it is set, not only when the process started.
+func historyDir() string {
+	return filepath.Join(nfDataDir(), "history")
+}
+
+// nfDataDir returns the NightForge data directory, honouring
+// NIGHTFORGE_DATA_DIR and falling back to $HOME/nightforge/data.
+func nfDataDir() string {
+	if dir := os.Getenv("NIGHTFORGE_DATA_DIR"); dir != "" {
+		return dir
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "data"
+	}
+	return filepath.Join(home, "nightforge", "data")
+}
 
 // HistoryRetentionDays is how long we keep history files.
 const HistoryRetentionDays = 7
@@ -25,7 +49,7 @@ var historyMu sync.Mutex
 // historyFilePath returns the path for today's history file.
 func historyFilePath() string {
 	today := time.Now().Format("2006-01-02")
-	return filepath.Join(historyDir, fmt.Sprintf("health-%s.jsonl", today))
+	return filepath.Join(historyDir(), fmt.Sprintf("health-%s.jsonl", today))
 }
 
 // RecordHealthSnapshot appends a health snapshot to today's history file.
@@ -34,7 +58,7 @@ func RecordHealthSnapshot(health model.Health) {
 	historyMu.Lock()
 	defer historyMu.Unlock()
 
-	if err := os.MkdirAll(historyDir, 0755); err != nil {
+	if err := os.MkdirAll(historyDir(), 0755); err != nil {
 		log.Printf("history: mkdir: %v", err)
 		return
 	}
@@ -68,11 +92,11 @@ func GetHistory(days int) []model.HistoryPoint {
 	historyMu.Lock()
 	defer historyMu.Unlock()
 
-	if err := os.MkdirAll(historyDir, 0755); err != nil {
+	if err := os.MkdirAll(historyDir(), 0755); err != nil {
 		return nil
 	}
 
-	entries, err := os.ReadDir(historyDir)
+	entries, err := os.ReadDir(historyDir())
 	if err != nil {
 		return nil
 	}
@@ -94,7 +118,7 @@ func GetHistory(days int) []model.HistoryPoint {
 			}
 		}
 
-		data, err := os.ReadFile(filepath.Join(historyDir, e.Name()))
+		data, err := os.ReadFile(filepath.Join(historyDir(), e.Name()))
 		if err != nil {
 			continue
 		}
@@ -125,7 +149,7 @@ func PurgeHistory() {
 	historyMu.Lock()
 	defer historyMu.Unlock()
 
-	entries, err := os.ReadDir(historyDir)
+	entries, err := os.ReadDir(historyDir())
 	if err != nil {
 		return
 	}
@@ -141,7 +165,7 @@ func PurgeHistory() {
 			continue
 		}
 		if t.Before(cutoff) {
-			os.Remove(filepath.Join(historyDir, e.Name()))
+			os.Remove(filepath.Join(historyDir(), e.Name()))
 			log.Printf("history: purged %s", e.Name())
 		}
 	}

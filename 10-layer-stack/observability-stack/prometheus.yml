@@ -1,17 +1,29 @@
+# Prometheus scrape config for the NightForge metrics stack.
+#
+# RETIRED 2026-10-19 (bead nightforge-aaj):
+#   - job `agentgateway` (127.0.0.1:31745) REMOVED. AgentGateway was purged
+#     from the fleet (vault 05-Architecture/10-layer-harness-build.md, S189
+#     transition 2026-08-16: "deprecated: ... agentgateway"). Nothing listens
+#     on 127.0.0.1:31745 and nothing ever will, so the target was a
+#     permanently-down scrape. The port number is now used by Prometheus
+#     itself on 127.0.0.2:31745.
+#   - job `harnessd` (127.0.0.1:9191) REMOVED. The harnessd control plane
+#     does not expose a Prometheus endpoint on the router that is actually
+#     served. cmd/harnessd/main.go builds internal/api.NewRouter(), which
+#     registers no /metrics route (verified 2026-10-19 by exercising the
+#     router: GET /metrics -> 404). The /metrics handler in
+#     internal/handler/metrics.go belongs to internal/server, a package that
+#     no binary imports. Scraping 9191 therefore always returned 404 and
+#     the target could never go green.
+#
+# What remains is the one target that genuinely works: node-exporter, which
+# exposes host CPU/memory/disk/load on 127.0.0.1:31750.
+
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: agentgateway
-    metrics_path: /metrics
-    static_configs:
-      - targets:
-          - 127.0.0.1:31745
-        labels:
-          service: agentgateway
-          layer: l4
-
   - job_name: node
     metrics_path: /metrics
     static_configs:
@@ -20,12 +32,3 @@ scrape_configs:
         labels:
           service: nightforge
           layer: l4
-
-  - job_name: harnessd
-    metrics_path: /metrics
-    static_configs:
-      - targets:
-          - 127.0.0.1:9191
-        labels:
-          service: harnessd
-          layer: l5

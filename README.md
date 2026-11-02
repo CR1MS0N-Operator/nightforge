@@ -127,27 +127,46 @@ single-file HTML frontend. No database, no build step. Depends only on
 `go-chi/chi/v5` (router) plus the standard library. Replaces the former
 `nightforged` daemon.
 
-- **Daemon:** `cmd/harnessd/main.go` — embeds the frontend, starts the health
-  collector, serves all routes
-- **Router:** `internal/server/server.go` — API + static frontend, CORS and
-  request logging middleware
-- **Handlers:** `internal/handler/` — one file per endpoint
-- **Collector:** `internal/collector/health.go` — 5-minute health snapshot
-  ticker, JSONL persistence
-- **Frontend:** `cmd/harnessd/frontend/index.html` — inline CSS/JS, Omarchy
-  dark theme, 6 tabs, 30s auto-refresh on the health tab
+- **Daemon:** `cmd/harnessd/main.go` — embeds the web UI, serves all routes
+- **Router:** `internal/api/routes.go` — `chi` router, API + SSE + static web
+  UI, CORS / request-logging / recovery middleware
+- **Handlers:** `internal/api/handlers.go` — one function per endpoint
+- **Collector:** `internal/collector/` — health snapshots, ports, services,
+  failures, proposals, gates, cost
+- **Frontend:** `web/index.html` — inline CSS/JS, Omarchy dark theme
 
 ### API
 
+The routes below are the ones the served router (`internal/api`) actually
+registers. Verified 2026-10-19 by exercising the router directly.
+
 | Endpoint | Returns |
 |----------|---------|
-| `GET /api/v1/health` | Latest health snapshot + recent history + daily summary |
-| `GET /api/v1/layers` | 10-layer harness status + proposals/gates/failures detail |
-| `GET /api/v1/sessions` | Agent session list (Pi/OMP/Hermes session dirs) |
-| `GET /api/v1/snapshots` | Snapshot inventory + rollback history |
-| `GET /api/v1/routes` | Active model-routing table (from `internal/handler/routes.go`) |
-| `GET /api/v1/cost` | Token usage + cost (`data/tokens/current.json`) |
-| `GET /metrics` | Prometheus exposition (`harness_*`, `agentgateway_requests_total`) |
+| `GET /api/v1/health` | Latest health snapshot (parsed from `system-health.log`) |
+| `GET /api/v1/services` | Discovered services (herdr, agents) |
+| `GET /api/v1/ports` | Listening TCP ports with service names |
+| `GET /api/v1/tasks` | Known agent tasks |
+| `GET /api/v1/analysis` | Failure/proposal analysis |
+| `GET /api/v1/logs` | Recent harness logs |
+| `GET /api/v1/usage` | Token usage + cost |
+| `GET /api/v1/layers` | 10-layer harness status |
+| `GET /api/v1/layers/l4/failures` | Mined failure sessions |
+| `GET /api/v1/layers/l5/proposals` | Proposal engine output |
+| `GET /api/v1/layers/l6/gates` | Validation gate state |
+| `GET /api/v1/layers/l7/snapshots` | Versioned snapshots |
+| `GET /api/v1/alerts` | Harness alerts |
+| `GET /api/v1/history` | Health snapshot history |
+| `GET /api/v1/discovery` | Service discovery status |
+| `GET /api/v1/config` | Effective control-plane config |
+| `GET /api/v1/notifications` | Pending notifications |
+| `GET /api/v1/events` | SSE event stream |
+
+> **No `/metrics` endpoint is served.** The `GET /metrics` handler in
+> `internal/handler/metrics.go` belongs to `internal/server`, a package no
+> binary imports — `cmd/harnessd` builds `internal/api.NewRouter()`. A
+> Prometheus scrape of `:9191/metrics` therefore returns 404. That target was
+> removed from `prometheus.yml` on 2026-10-19 (bead `nightforge-aaj`).
+> Registering `/metrics` on the served router is a code change, still open.
 
 ### Data Store (`data/`)
 
@@ -216,14 +235,20 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design and
 
 ## Observability Stack
 
-Docker Compose stack in
-[`10-layer-stack/observability-stack/`](10-layer-stack/observability-stack/)
-serving L2 (trace log) and the future L9 (benefit measurement): OTel
-Collector, Prometheus, Grafana, node-exporter, and Langfuse. It collects
-AgentGateway traces and host/agent metrics. **Not started automatically** —
-operator starts it after populating `.env` (see the
+Host-metrics stack in
+[`10-layer-stack/observability-stack/`](10-layer-stack/observability-stack/):
+Prometheus, Grafana and node-exporter. **Not started automatically** — the
+operator creates `.env` and starts it (see the
 [stack README](10-layer-stack/README.md) for ports and the startup
 procedure).
+
+**Trace/LLM observability is not in this repository.** The canonical
+Langfuse runs outside it on `127.0.0.1:50598` (docker project `langfuse`,
+compose at
+`~/Documents/ai-lab-vault/20-Tools/agentsview-langfuse-setup/langfuse/`).
+The duplicate Langfuse and the OTel Collector that fed it were retired on
+2026-10-19 — see
+[`PORT-REGISTRY-PROPOSAL.md`](10-layer-stack/observability-stack/PORT-REGISTRY-PROPOSAL.md).
 
 ---
 

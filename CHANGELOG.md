@@ -3,6 +3,68 @@
 All notable changes are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); newest first.
 
+## 2026-10-19 — Observability Stack Honesty Pass (bead `nightforge-aaj`)
+
+Operator decision: **drop the competing Langfuse.** The live instance is the
+canonical one on `127.0.0.1:50598` (docker project `langfuse`, outside this
+repository). The duplicate in this repo had never run.
+
+### Removed
+- **Duplicate Langfuse** from `10-layer-stack/observability-stack/docker-compose.yml`:
+  `langfuse-web`, `langfuse-worker`, `postgres`, `clickhouse`, `minio`,
+  `redis`, their five named volumes, and every env var only they used
+  (`POSTGRES_PASSWORD`, `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_USER`,
+  `CLICKHOUSE_MIGRATION_URL`, `CLICKHOUSE_URL`, `CLICKHOUSE_CLUSTER_ENABLED`,
+  `REDIS_AUTH`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `SALT`,
+  `ENCRYPTION_KEY`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `DATABASE_URL`,
+  `TELEMETRY_ENABLED`, `LANGFUSE_*` init vars).
+- **OTel Collector** (`:31744`) and `otel-collector.yml` — its only exporter
+  destination was the duplicate Langfuse, and no producer targets `:31744`.
+  The canonical path is OMP → `:50598` direct
+  (`cr1ms0n-otel-env.service`) and dsh → `:14318` bridge → `:50598`.
+- **`grafana-dashboard.json`** (four-agent dashboard) — every panel queried a
+  metric nothing emits (`harness_*`, `agentgateway_*`, `DCGM_FI_DEV_GPU_UTIL`).
+  Replaced by `nightforge-metrics.json`, node-exporter series only.
+
+### Fixed
+- **Scrape targets:** removed `agentgateway` → `127.0.0.1:31745` (AgentGateway
+  purged 2026-08-16; nothing listens there) and `harnessd` → `127.0.0.1:9191`
+  (the served router registers no `/metrics`; `GET /metrics` → 404).
+  `prometheus.yml` now has one target, `node` → `127.0.0.1:31750`, which works.
+- **Secrets fail loudly:** `${VAR:-REPLACE_*}` defaults are gone. The one
+  remaining secret, `GRAFANA_ADMIN_PASSWORD`, is `${GRAFANA_ADMIN_PASSWORD:?...}`,
+  so compose refuses to parse the file when it is unset or empty. A missing
+  `.env` is an error, not a placeholder password. `.env.example` rewritten
+  with non-secret placeholders only.
+- **README startup path:** `~/Github/nightforge` → `~/Projects/nightforge`.
+  `~/Github` does not exist on this workstation; the old path resolved to
+  nothing. Stated plainly in the stack README and
+  `10-layer-stack/observability-stack/TROUBLESHOOTING.md`.
+- **Collector data path:** `internal/collector/history.go` wrote health
+  snapshots to `$HOME/Github/nightforge/data/history` — a path that does not
+  exist, so snapshots went nowhere. Now honours `NIGHTFORGE_DATA_DIR` and
+  falls back to `$HOME/nightforge/data`, matching `scripts/harness/`.
+- **Langfuse discovery:** `internal/collector/discovery.go` probed `:31744`
+  (the retired collector) to decide whether Langfuse was up. It now probes the
+  canonical `:50598`, and parses the host/port from the configured endpoint
+  instead of hardcoding the address. `internal/config` default updated too.
+- **Root README API table** listed routes the daemon does not serve
+  (`/api/v1/cost`, `/api/v1/routes`, `/api/v1/sessions`, `/api/v1/snapshots`,
+  `/metrics`) and pointed at `internal/server`, a package no binary imports.
+  Corrected to the routes `internal/api` actually registers, verified by
+  exercising the router.
+
+### Added
+- `10-layer-stack/observability-stack/PORT-REGISTRY-PROPOSAL.md` — the exact
+  vault port-registry rows this stack needs (`31745`/`31746`/`31750` to add,
+  `31744`/`31747` as decommissioned, and why `9191` is not a stack port).
+  The registry itself is vault-owned and was not modified from this repo.
+
+### Known gap (not fixed here — needs a decision)
+- The TETHER control plane still serves **no** `/metrics` endpoint. Adding it
+  to `internal/api` is a code change beyond this pass's file-and-config
+  scope; the Prometheus target was removed rather than left permanently down.
+
 ## 2026-08-01 — Security Remediation & Stale-Directory Audit
 
 ### Security

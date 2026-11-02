@@ -1,6 +1,46 @@
-max_trees = 16
-root = ""
+# treehouse.toml — per-repo worktree pool for the nightforge repository.
+#
+# Bead: nightforge-hke (P0 dispatch isolation; exec:dsh worker lane, 2026-10-19).
+# This file was previously the generated `treehouse init` default: max_trees = 16,
+# root = "" (implicit $HOME), and no base_branch. The pool location and cut point
+# were therefore inferred. Both are now DECLARED, following the vault's pattern
+# (bead ai-lab-vault-f6yz; runbook: ai-lab-vault/.dsh-work/phase-a/egress/DISPATCH-ISOLATION.md).
 
-# Worktree root directory (relative to repo root or absolute path).
-# Worktrees are placed under {root}/.treehouse/. Default: $HOME
-# Example: root = "./"
+# Pool size: unchanged from the generated default (16 slots).
+max_trees = 16
+
+# Explicit pool root. {root}/.treehouse/ resolves to
+# /home/cr1ms0n/.treehouse/nightforge-4cb3e6/{slot}/nightforge — the pool treehouse
+# had already been using while root was implicitly $HOME, so this pins the same
+# location and an unset/moved HOME can no longer silently relocate it.
+root = "/home/cr1ms0n"
+
+# base_branch = "main" — DELIBERATE. Measured in this checkout on 2026-10-19:
+#
+#   * origin = https://github.com/CR1MS0N-Operator/nightforge.git and
+#     origin/HEAD -> refs/remotes/origin/main (45f47ff): main is the repository
+#     default, i.e. the trunk. This is also what treehouse already inferred
+#     ("base main (repository default)"), so pinning it changes no acquisition
+#     today — it only stops a later checkout from changing the cut point.
+#   * The checked-out branch chore/remove-coauthor-blocklist (58541cc) is
+#     `main + exactly 1 commit, 0 behind` (git rev-list --left-right --count
+#     main...HEAD -> 0 1). That one commit deletes scripts/hooks/{blocklist,
+#     commit-msg,install.sh}; it is a housekeeping chore, not work a fresh slot
+#     must inherit. So main is CURRENT, not stale — the vault's reason for
+#     leaving base_branch unset (its main is 185 commits behind the session
+#     branch) does not apply here.
+#   * main is the LOCAL ref, deliberately: local main (12e5432 "bd init:
+#     initialize beads issue tracking") is 1 ahead of origin/main and is the
+#     first commit that tracks .beads/config.yaml, .beads/metadata.json and the
+#     .beads/hooks/* used by `bd`. Cutting slots from origin/main would strip
+#     the beads tooling out of every worktree; cutting from main keeps it.
+#   * The shared checkout is heavily dirty (80 tracked modifications/deletions,
+#     24 untracked entries / 109 untracked files). That does not affect the cut
+#     point: treehouse cuts from a commit, and uncommitted edits never travel
+#     into a slot.
+#   * Pinning protects against this repo's ~10 stale feature branches
+#     (dotfiles-snapshot-S213, feat/wgpu-spike-phase0, pr9-clean, ...): if the
+#     shared checkout is later left on one of them, inference could hand a
+#     stale tree to a worker. `--base` per dispatch still overrides for a single
+#     acquisition, and an unresolvable base is an error, never a silent fallback.
+base_branch = "main"
