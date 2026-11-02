@@ -6,6 +6,23 @@ Operator workstation repository for CR1MS0N-Operator. Omarchy-based (opinionated
 Arch Linux) desktop environment (Hyprland/Omarchy shell/Omarchy theming dotfiles), rootless
 Podman container profiles, and the TETHER harness control plan (Go, `127.0.0.1:9191`).
 
+## Language policy (operator rule, 2026-11-01, decision #289)
+
+Only Rust, Go and C/C++ ship first-party software:
+
+- **Big projects** — services, long-lived programs, substantial internal logic → **Rust**, as much as possible.
+- **Tools and scripts** — first-party CLIs, gates, helpers → **Go**, standard library only.
+- **C/C++** — only when a measurement shows a drastic difference; never a default, never a preference.
+
+**Browser UI is the one scoped exception (decision #290).** TypeScript is permitted for code that runs
+in a browser when an application genuinely needs a framework; services and APIs stay Rust/Go, and a
+TypeScript/Node backend is a violation, not an application of the exception. Static/content sites are
+content, not software.
+
+**This repo's only software is the TETHER harness — a long-lived service, so the big-project (Rust) tier; the existing Go predates this rule.** Dotfiles and shell here are config, not software.
+
+Authority: decision #289 and `~/Documents/ai-lab-vault/AGENTS.md` § "Language policy". Open point: existing shell glue is thin operator glue, not software, and stays until touched.
+
 ## Agent Architecture (current)
 
 | Role | Scope |
