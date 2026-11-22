@@ -107,4 +107,4 @@ Map `maximize-column` → `fullscreen` and `center-column` → `centerwindow` on
 A team-ready container environment is implemented: rootless Podman base
 (`toolbox`) plus `ad`, `re`, and `web` profiles with directory-contract
 mounts, versioned tags, and air-gapped export/import. See
-[README.md](../README.md#container-profiles).
+[technical reference](REFERENCE.md#container-profiles).
