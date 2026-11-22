@@ -370,19 +370,19 @@ if [ -s "$OUTPUT_DIR/dns/live-hosts.txt" ]; then
         [ "$MODE" = "balanced" ] && echo -e "  ${BLUE}ℹ${NC} Estimated time: 5-10 minutes"
         echo "  → Scanning ports (naabu) on ${HOST_COUNT} host(s)..."
 
-        NAABU_CMD="naabu -l $OUTPUT_DIR/dns/live-hosts.txt -silent -o $OUTPUT_DIR/ports/open-ports.txt"
+        naabu_args=(-l "$OUTPUT_DIR/dns/live-hosts.txt" -silent -o "$OUTPUT_DIR/ports/open-ports.txt")
 
         if [ -n "$CUSTOM_PORTS" ]; then
-            NAABU_CMD="$NAABU_CMD -p $CUSTOM_PORTS"
+            naabu_args+=(-p "$CUSTOM_PORTS")
         elif [ "$MODE" = "fast" ] || [ "$SHIELD_MODE" = true ]; then
-            NAABU_CMD="$NAABU_CMD -top-ports 1000"
+            naabu_args+=(-top-ports 1000)
         else
-            NAABU_CMD="$NAABU_CMD -p -"
+            naabu_args+=(-p -)
         fi
 
-        [ -n "$RATE_LIMIT" ] && NAABU_CMD="$NAABU_CMD -rate $RATE_LIMIT"
+        [ -n "$RATE_LIMIT" ] && naabu_args+=(-rate "$RATE_LIMIT")
 
-        eval "$NAABU_CMD" 2>/dev/null &
+        naabu "${naabu_args[@]}" 2>/dev/null &
         NAABU_PID=$!
 
         spin='-\|/'
