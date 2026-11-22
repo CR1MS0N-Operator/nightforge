@@ -53,8 +53,10 @@ Review the [installation guide](docs/INSTALL.md), [profiles](docs/PROFILES.md),
 and manifests before applying host changes.
 
 ```bash
-git clone https://github.com/\
-CR1MS0N-Operator/nightforge.git
+owner=CR1MS0N-Operator
+host=https://github.com
+git clone \
+  "$host/$owner/nightforge"
 cd nightforge
 
 # Preview packages only.
