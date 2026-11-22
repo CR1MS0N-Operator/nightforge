@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/scripts/qs-watcher"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/harness"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/shell"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
