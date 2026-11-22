@@ -53,11 +53,15 @@ Review the [installation guide](docs/INSTALL.md), [profiles](docs/PROFILES.md),
 and manifests before applying host changes.
 
 ```bash
-git clone https://github.com/CR1MS0N-Operator/nightforge.git
+repo=CR1MS0N-Operator/nightforge
+git clone \
+  "https://github.com/$repo.git"
 cd nightforge
 
-# Review the package plan without changing the host.
-./install.sh --profile solo-operator --dry-run
+# Preview packages only.
+./install.sh \
+  --profile solo-operator \
+  --dry-run
 ```
 
 After reviewing the plan, follow the installation guide to install packages,
@@ -82,12 +86,12 @@ does not provision them.
 
 ## Architecture Overview
 
-| Layer | Responsibility | Start here |
-|-------|----------------|------------|
-| Desktop | Compositor, shell, themes, terminal configuration | [System configuration](docs/SYSTEM-CONFIGURATION.md) |
-| Toolchains | Rootless containers and package profiles | [Containers](docs/CONTAINER.md) |
-| Harness | Go dashboard, JSONL evidence, validation scripts | [Technical reference](docs/REFERENCE.md) |
-| Host metrics | Operator-started Prometheus, Grafana, node-exporter | [Observability stack](10-layer-stack/README.md) |
+| Layer | Role and guide |
+|-------|----------------|
+| Desktop | Shell, themes, and terminal. [Configuration](docs/SYSTEM-CONFIGURATION.md) |
+| Toolchains | Rootless tooling. [Containers](docs/CONTAINER.md) |
+| Harness | Dashboard and evidence. [Reference](docs/REFERENCE.md) |
+| Host metrics | Prometheus and Grafana. [Stack guide](10-layer-stack/README.md) |
 
 The host-metrics stack is optional and is not started automatically. Trace/LLM
 observability runs outside this repository; the retired duplicate Langfuse and
