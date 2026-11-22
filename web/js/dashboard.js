@@ -458,7 +458,7 @@ function renderLayers() {
       <div class="card h-100">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="badge ${s.cls}"><i class="bi ${s.icon} me-1"></i>${esc(l.status)}</span>
+            <span class="badge ${esc(s.cls)}"><i class="bi ${esc(s.icon)} me-1"></i>${esc(l.status)}</span>
             <small class="text-muted fw-bold">L${l.id}</small>
           </div>
           <h6 class="fw-bold mb-1">${esc(l.name)}</h6>
