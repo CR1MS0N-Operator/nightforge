@@ -12,7 +12,7 @@ crossterm = "0.28"
 ratatui = "0.30"
 
 # Config
-toml = "0.8"
+toml = "1.2"
 serde = { version = "1.0", features = ["derive"] }
 
 # Logging
