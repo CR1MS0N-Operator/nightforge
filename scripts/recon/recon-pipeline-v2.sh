@@ -402,22 +402,22 @@ if [ -s "$OUTPUT_DIR/dns/live-hosts.txt" ]; then
         [ "$MODE" = "fast" ] && echo -e "  ${BLUE}ℹ${NC} Estimated time: 1-3 minutes"
         [ "$MODE" = "balanced" ] && echo -e "  ${BLUE}ℹ${NC} Estimated time: 5-10 minutes"
         
-        # Build naabu command
-        NAABU_CMD="naabu -l $OUTPUT_DIR/dns/live-hosts.txt -silent -o $OUTPUT_DIR/ports/open-ports.txt"
-        
+        # Build naabu argv as an array — values stay data, never re-parsed as shell code
+        naabu_args=(-l "$OUTPUT_DIR/dns/live-hosts.txt" -silent -o "$OUTPUT_DIR/ports/open-ports.txt")
+
         if [ -n "$CUSTOM_PORTS" ]; then
-            NAABU_CMD="$NAABU_CMD -p $CUSTOM_PORTS"
+            naabu_args+=(-p "$CUSTOM_PORTS")
         elif [ "$MODE" = "fast" ]; then
-            NAABU_CMD="$NAABU_CMD -top-ports 1000"
+            naabu_args+=(-top-ports 1000)
         else
-            NAABU_CMD="$NAABU_CMD -p -"
+            naabu_args+=(-p -)
         fi
-        
+
         if [ -n "$RATE_LIMIT" ]; then
-            NAABU_CMD="$NAABU_CMD -rate $RATE_LIMIT"
+            naabu_args+=(-rate "$RATE_LIMIT")
         fi
-        
-        eval "$NAABU_CMD" 2>/dev/null &
+
+        naabu "${naabu_args[@]}" 2>/dev/null &
         NAABU_PID=$!
         
         spin='-\|/'
